@@ -1,0 +1,6 @@
+{
+  "name": "eBook Reader",
+  "description": "A web application that performs OCR on uploaded PDFs/images and reads the extracted text aloud using Text-to-Speech.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

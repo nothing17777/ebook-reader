@@ -1,0 +1,1590 @@
+<!doctype html>
+<html lang="en" class="h-full bg-[#F7F3EE] text-stone-900">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>eBook Reader - Premium TTS & OCR Reader</title>
+    
+    <!-- Google Fonts for typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Tesseract.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Tailwind Config for typography pairing and custom theme extension -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              editorial: {
+                paper: '#F7F3EE',      // Soft warm paper beige
+                sidebar: '#F0EDE8',    // Muted grey-sandstone sidebar
+                canvas: '#FDFBF7',     // Pure book-page ivory
+                divider: 'rgba(0,0,0,0.08)',
+                text: '#1A1A1A',
+                muted: '#8C8882',
+                border: '#D1CDC7'
+              }
+            },
+            fontFamily: {
+              sans: ['"DM Sans"', 'sans-serif'],
+              serif: ['"Lora"', 'serif'],
+            }
+          }
+        }
+      }
+    </script>
+    
+    <style>
+      /* Smooth transitions */
+      .fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      /* Word hover and selection highlights */
+      .word {
+        position: relative;
+        display: inline-block;
+        border-radius: 0.125rem;
+        transition: all 150ms ease-in-out;
+      }
+      .word:hover {
+        background-color: #E0DCD6 !important;
+        color: #1A1A1A !important;
+      }
+      
+      /* Active word highlight */
+      .word-highlight {
+        background-color: #FDE68A !important; /* Editorial amber/yellow pastel */
+        color: #000000 !important;
+        box-shadow: 0 0 0 2px #FDE68A;
+        font-weight: 500;
+        transform: scale(1.02);
+      }
+      
+      /* Custom scrollbar for beautiful margins */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+  <body class="font-sans antialiased h-full flex flex-col justify-between bg-[#F7F3EE]">
+
+    <!-- Header Navigation in Editorial Aesthetic theme -->
+    <header class="bg-[#F7F3EE] text-stone-900 h-16 px-6 md:px-8 border-b border-black/10 shrink-0 flex items-center">
+      <div class="max-w-7xl w-full mx-auto flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="p-1.5 bg-stone-900 text-[#FDFBF7] rounded">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="text-base font-bold tracking-tight uppercase text-stone-950 font-sans">eBook Reader</h1>
+            <p id="top-filename" class="text-[11px] font-semibold text-emerald-800 tracking-wide truncate max-w-[180px] sm:max-w-[320px] md:max-w-md hidden" style="line-height: normal;"></p>
+          </div>
+        </div>
+        <div id="header-reset" class="hidden">
+          <button id="btn-reset-header" class="flex items-center space-x-1 px-4 py-2 bg-stone-950 hover:bg-stone-800 text-white rounded transition text-xs font-semibold shadow-sm">
+            <i data-lucide="file-plus" class="w-4 h-4 mr-1"></i>
+            <span>New file</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Workspaces -->
+    <main class="flex-grow flex flex-col justify-center max-w-7xl w-full mx-auto p-4 md:p-8">
+      
+      <!-- STEP 1: UPLOAD / LANDING SCREEN (Editorial paper style) -->
+      <section id="workspace-upload" class="bg-[#FDFBF7] rounded border border-[#D1CDC7] p-8 md:p-12 shadow-sm max-w-2xl w-full mx-auto text-center space-y-8 fade-in">
+        <div class="space-y-3">
+          <div class="inline-flex p-3.5 bg-stone-100 text-stone-850 rounded-full mb-1">
+            <i data-lucide="sparkles" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-stone-900 font-sans uppercase">Bring Your Book to Life</h2>
+          <p class="text-[#8C8882] max-w-md mx-auto text-sm md:text-base leading-relaxed">
+            Upload PDFs or images. Our smart engine extracts the text (with OCR if scanned) and reads it aloud with synchronous, layout-aware highlighting.
+          </p>
+        </div>
+
+        <!-- Drag & Drop Zone (Editorial Style) -->
+        <div id="drop-zone" class="border border-dashed border-[#D1CDC7] hover:border-stone-900 bg-[#F0EDE8]/20 hover:bg-[#F0EDE8]/45 rounded p-8 md:p-12 cursor-pointer transition text-center group">
+          <input type="file" id="file-input" class="hidden" accept=".pdf, image/*" />
+          <div class="flex flex-col items-center space-y-4">
+            <div class="p-4 bg-stone-100 group-hover:bg-[#F0EDE8] rounded text-[#8C8882] transition shadow-sm border border-stone-200/50">
+              <i data-lucide="cloud-upload" class="w-7 h-7 text-stone-700"></i>
+            </div>
+            <div>
+              <span class="block text-stone-900 font-bold group-hover:text-stone-950 transition text-sm uppercase tracking-wide">Drag & drop your file here</span>
+              <span class="block text-[#8C8882] text-xs mt-1">Accepts PDF, Image (PNG, JPG, WEBP)</span>
+            </div>
+            <button class="px-5 py-2.5 bg-[#1A1A1A] hover:bg-stone-800 text-[#FDFBF7] rounded transition font-semibold text-xs tracking-wide uppercase">
+              Browse Files
+            </button>
+          </div>
+        </div>
+
+        <!-- Extra Info Notes -->
+        <div class="grid grid-cols-2 gap-4 text-left pt-2">
+          <div class="flex items-start space-x-2.5 p-3 rounded bg-[#F0EDE8]/40 border border-[#D1CDC7]/40">
+            <div class="text-[#8C8882] mt-0.5">
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wide">Client-Side OCR</h4>
+              <p class="text-[11px] text-[#8C8882] mt-0.5 leading-relaxed">Scanned pages are deciphered locally using Tesseract.js engine.</p>
+            </div>
+          </div>
+          <div class="flex items-start space-x-2.5 p-3 rounded bg-[#F0EDE8]/40 border border-[#D1CDC7]/40">
+            <div class="text-[#8C8882] mt-0.5">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wide">100% Secure & Offline</h4>
+              <p class="text-[11px] text-[#8C8882] mt-0.5 leading-relaxed">Files never touch a server. All processing is processed in your browser.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: PROCESSING SCREEN -->
+      <section id="workspace-processing" class="hidden bg-[#FDFBF7] rounded border border-[#D1CDC7] p-8 md:p-12 shadow-sm max-w-md w-full mx-auto text-center space-y-6 fade-in">
+        <div class="space-y-2">
+          <div class="inline-flex p-3 bg-[#F0EDE8] text-stone-800 animate-pulse rounded-full mb-1">
+            <i data-lucide="loader-2" class="w-7 h-7 animate-spin"></i>
+          </div>
+          <h3 class="text-lg font-bold uppercase tracking-wider text-stone-900">Processing Document</h3>
+          <p id="processing-file-name" class="text-[#8C8882] text-xs truncate max-w-xs mx-auto font-medium"></p>
+        </div>
+
+        <!-- Thumbnail Holder for processing feedback -->
+        <div id="processing-thumbnail" class="flex justify-center my-4 hidden"></div>
+
+        <!-- Progress Bar -->
+        <div class="space-y-2">
+          <div class="w-full bg-[#E0DCD6] rounded-full h-1.5 overflow-hidden">
+            <div id="progress-bar-fill" class="bg-[#1A1A1A] h-full w-0 transition-all duration-300 rounded-full"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-[#8C8882] font-semibold tracking-wider">
+            <span id="processing-stage" class="uppercase">Analyzing structure...</span>
+            <span id="processing-pct">0%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ERROR DIALOG CONTAINER -->
+      <div id="error-container" class="hidden max-w-md w-full mx-auto mt-4 p-4 bg-red-50 text-red-850 text-xs rounded border border-red-100 flex items-start space-x-2.5 shadow-sm fade-in font-sans">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 shrink-0"></i>
+        <div class="space-y-1">
+          <h4 class="font-bold uppercase tracking-wide">An Error Occurred</h4>
+          <p id="error-message"></p>
+        </div>
+      </div>
+
+      <!-- STEP 3: WORKSPACE SCREEN (EBOOK WORKSPACE in Editorial theme) -->
+      <section id="workspace-reader" class="hidden w-full space-y-6 fade-in">
+        
+        <!-- Controls bar: Play/Pause/Stop | speed slider | voice select | page nav (PDFs only) -->
+        <div class="bg-[#F0EDE8] text-stone-900 rounded border border-[#D1CDC7] p-4 md:p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+          
+          <!-- Play/Pause/Stop Media Buttons -->
+          <div class="flex items-center space-x-3 order-1 md:order-none">
+            <button id="btn-stop" class="p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center" title="Stop Playback">
+              <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+            </button>
+            <button id="btn-play" class="p-3 bg-stone-950 hover:bg-stone-850 text-white rounded transition shadow-sm active:scale-95 flex items-center justify-center w-11 h-11" title="Start Playback">
+              <i id="play-icon" data-lucide="play" class="w-5 h-5 fill-current"></i>
+            </button>
+            <button id="btn-pause" class="p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center" title="Pause Playback">
+              <i data-lucide="pause" class="w-4 h-4 fill-current"></i>
+            </button>
+          </div>
+
+          <!-- Speed Slider Rate Controller -->
+          <div class="flex items-center space-x-3 w-full md:w-auto max-w-xs flex-1">
+            <span class="text-[11px] font-bold text-stone-600 uppercase tracking-wider shrink-0">Speed</span>
+            <input type="range" id="rate-range" min="0.5" max="2.0" step="0.1" value="1.0" class="flex-grow accent-stone-900 h-1 bg-[#E0DCD6] rounded cursor-pointer" />
+            <span id="rate-display" class="px-2 py-0.5 bg-white border border-[#D1CDC7] text-stone-900 font-bold text-xs rounded-sm shrink-0 min-w-[40px] text-center">1.0×</span>
+          </div>
+
+          <!-- Voice Selection -->
+          <div class="flex items-center space-x-2 w-full md:w-auto max-w-xs">
+            <span class="text-[11px] font-bold text-stone-600 uppercase tracking-wider shrink-0">Voice</span>
+            <div class="relative flex-1 col-span-2">
+              <select id="voice-select" class="w-full bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] rounded px-3 py-1.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition appearance-none pr-8 font-medium">
+                <!-- Populated dynamically -->
+              </select>
+              <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-stone-500">
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Page navigation (PDFs only) -->
+          <div id="pdf-navigation" class="flex items-center space-x-2 w-full md:w-auto justify-center md:justify-end">
+            <button id="btn-prev-page" class="p-2 bg-white hover:bg-[#FDFBF7] text-stone-900 border border-[#D1CDC7] rounded transition disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95" title="Previous Page">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span id="pager-stat-label" class="text-xs font-serif italic text-stone-900 px-3 min-w-[70px] text-center font-bold tracking-wide">
+              01 / 01
+            </span>
+            <button id="btn-next-page" class="p-2 bg-white hover:bg-[#FDFBF7] text-stone-900 border border-[#D1CDC7] rounded transition disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95" title="Next Page">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- PDF canvas or image viewer (full width, bordered) -->
+        <div class="bg-[#FDFBF7] border border-[#D1CDC7] rounded p-4 md:p-8 shadow-sm flex flex-col justify-center items-center min-h-[420px] relative overflow-hidden">
+          <div id="visual-viewer-container" class="w-full h-full flex items-center justify-center overflow-auto custom-scrollbar">
+            <!-- Canvas or Img lives here -->
+          </div>
+          <!-- Floating doc-stats at bottom of viewer -->
+          <div class="absolute bottom-2 right-4 text-[10px] text-stone-400 font-mono tracking-wider" id="debug-stats">
+            <!-- stats loaded -->
+          </div>
+        </div>
+
+        <!-- "Now reading" bar pinned below viewer (always visible when reader is open) -->
+        <div id="now-reading-bar" class="bg-[#FAC775]/15 border border-[#FAC775]/45 rounded-lg p-5 flex flex-col space-y-2 shadow-sm transition-all">
+          <div class="flex items-center justify-between border-b border-[#FAC775]/30 pb-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-[#412402] flex items-center">
+              <i data-lucide="audio-lines" class="w-4 h-4 mr-1.5 animate-pulse text-[#412402]"></i>
+              Now Reading
+            </span>
+            <span id="page-counter-label" class="text-xs font-serif italic text-[#412402]">Page 1</span>
+          </div>
+          <div id="now-reading-text" class="flex flex-wrap items-center justify-center py-2 min-h-[48px] text-center leading-relaxed">
+            <span class="text-stone-400 italic">No document parsed...</span>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer Copyright Branding (Editorial styled) -->
+    <footer class="py-6 bg-[#F7F3EE] border-t border-black/10 text-[#8C8882] text-center text-xs shrink-0 select-none pb-8">
+      <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0 text-[11px] font-medium uppercase tracking-wide">
+        <p>&copy; 2026 eBook Reader. Client-side Text-to-Speech & OCR sandbox.</p>
+        <div class="flex items-center space-x-3 text-stone-500">
+          <span class="flex items-center"><span class="w-1.5 h-1.5 bg-stone-900 rounded-full mr-1.5 animate-pulse"></span> Sandbox Local Active</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- CLIENT SCRIPT HANDLER -->
+    <script>
+      // Set PDF.js Global Worker source URL
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      // Application State
+      const state = {
+        file: null,
+        fileName: '',
+        fileType: '',
+        pagesText: [],      // Array of complete cleaned strings for each page
+        allWords: [],       // Consolidated string words list across all pages
+        pageWordIndices: [],// Start and count references for mapping back to page numbers
+        wordPositions: [],  // [{ word, pageIndex, x, y, w, h }, ...] flat array aligned 1:1 with allWords
+        currentPage: 1,
+        
+        // TTS Playback status state
+        isPlaying: false,
+        isPaused: false,
+        currentWordIndex: 0,
+        currentUtterance: null,
+        isTransitioningRate: false
+      };
+
+      // Voice lists
+      let voices = [];
+
+      // UI Element references
+      const elUploadSection = document.getElementById('workspace-upload');
+      const elProcessingSection = document.getElementById('workspace-processing');
+      const elReaderSection = document.getElementById('workspace-reader');
+      const elHeaderReset = document.getElementById('header-reset');
+      const elTopFilename = document.getElementById('top-filename');
+      
+      const elDropZone = document.getElementById('drop-zone');
+      const elFileInput = document.getElementById('file-input');
+      const elErrorContainer = document.getElementById('error-container');
+      const elErrorMessage = document.getElementById('error-message');
+      
+      const elProcFileName = document.getElementById('processing-file-name');
+      const elProcThumbnail = document.getElementById('processing-thumbnail');
+      const elProgressBarFill = document.getElementById('progress-bar-fill');
+      const elProcStageText = document.getElementById('processing-stage');
+      const elProcPctText = document.getElementById('processing-pct');
+      
+      const elVoiceSelect = document.getElementById('voice-select');
+      const elRateRange = document.getElementById('rate-range');
+      const elRateDisplay = document.getElementById('rate-display');
+      
+      const elVisualViewerContainer = document.getElementById('visual-viewer-container');
+      const elPdfNavigation = document.getElementById('pdf-navigation');
+      const elPageCounterLabel = document.getElementById('page-counter-label');
+      const elPagerStatLabel = document.getElementById('pager-stat-label');
+      const elDebugStats = document.getElementById('debug-stats');
+      
+      const elNowReadingBar = document.getElementById('now-reading-bar');
+      const elNowReadingText = document.getElementById('now-reading-text');
+      
+      const elBtnPrevPage = document.getElementById('btn-prev-page');
+      const elBtnNextPage = document.getElementById('btn-next-page');
+      const elBtnPlay = document.getElementById('btn-play');
+      const elBtnPause = document.getElementById('btn-pause');
+      const elBtnStop = document.getElementById('btn-stop');
+      const elBtnResetHeader = document.getElementById('btn-reset-header');
+      
+      const elPlayIcon = document.getElementById('play-icon');
+
+      // Initialize speech voice options
+      function populateSpeechVoices() {
+        if (!window.speechSynthesis) return;
+        
+        voices = window.speechSynthesis.getVoices();
+        elVoiceSelect.innerHTML = '';
+        
+        // Filter out English spoken accents
+        const englishVoices = voices.filter(voice => 
+          voice.lang.toLowerCase().startsWith('en-') || 
+          voice.lang.toLowerCase() === 'en'
+        );
+        
+        const voicesToRender = englishVoices.length > 0 ? englishVoices : voices;
+        
+        if (voicesToRender.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = "";
+          opt.textContent = "Default Browser Narrator";
+          elVoiceSelect.appendChild(opt);
+          return;
+        }
+        
+        voicesToRender.forEach(voice => {
+          const opt = document.createElement('option');
+          opt.value = voice.name;
+          opt.textContent = `${voice.name} (${voice.lang})`;
+          
+          // Set selection preference for standard high quality Google/Microsoft accents
+          if (
+            voice.name.includes('Google US English') ||
+            voice.name.includes('Microsoft Zira') ||
+            voice.name.includes('Microsoft David') ||
+            voice.default
+          ) {
+            opt.selected = true;
+          }
+          elVoiceSelect.appendChild(opt);
+        });
+      }
+
+      // Hook up Voice Synthesis events
+      if (window.speechSynthesis) {
+        populateSpeechVoices();
+        window.speechSynthesis.onvoiceschanged = populateSpeechVoices;
+      }
+
+      // Drag & Drop Event Handlers
+      elDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        elDropZone.classList.add('border-amber-500', 'bg-amber-50/10');
+      });
+
+      elDropZone.addEventListener('dragleave', () => {
+        elDropZone.classList.remove('border-amber-500', 'bg-amber-50/10');
+      });
+
+      elDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        elDropZone.classList.remove('border-amber-500', 'bg-amber-50/10');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFile(files[0]);
+        }
+      });
+
+      elDropZone.addEventListener('click', () => {
+        elFileInput.click();
+      });
+
+      elFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFile(e.target.files[0]);
+        }
+      });
+
+      // Dispatch file processing based on extension / metadata type
+      function handleFile(file) {
+        elErrorContainer.classList.add('hidden');
+        state.file = file;
+        state.fileName = file.name;
+        state.fileType = file.type;
+        
+        const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+        const isImage = file.type.startsWith('image/');
+        
+        if (!isPdf && !isImage) {
+          showError("Unsupported file type selected. Please upload a PDF file or any classic image formats (JPEG, PNG, WEBP).");
+          return;
+        }
+
+        // Transitions step
+        elUploadSection.classList.add('hidden');
+        elProcessingSection.classList.remove('hidden');
+        elProcFileName.textContent = file.name;
+        
+        // Show file loading status percentage
+        updateProgress(0, "Reading document structure...");
+        
+        // Render immediate file format thumbnail
+        renderProcessingDocThumbnail(file);
+
+        if (isPdf) {
+          processPDFDocument(file);
+        } else {
+          processImageOCR(file);
+        }
+      }
+
+      // Show temporary thumbnail view as a progress loader feedback
+      async function renderProcessingDocThumbnail(file) {
+        elProcThumbnail.innerHTML = '';
+        elProcThumbnail.classList.remove('hidden');
+        
+        if (file.type === 'application/pdf') {
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const viewport = page.getViewport({ scale: 0.25 });
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({ canvasContext: context, viewport }).promise;
+            
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL();
+            img.className = 'w-16 h-20 object-cover rounded shadow border border-stone-200';
+            elProcThumbnail.appendChild(img);
+          } catch (e) {
+            renderFallbackThumbIcon("file-text", "red");
+          }
+        } else {
+          try {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.className = 'w-16 h-16 object-cover rounded shadow border border-stone-200';
+            elProcThumbnail.appendChild(img);
+          } catch (e) {
+            renderFallbackThumbIcon("image", "amber");
+          }
+        }
+      }
+
+      function renderFallbackThumbIcon(iconName, colorClass) {
+        elProcThumbnail.innerHTML = `
+          <div class="w-16 h-20 flex flex-col items-center justify-center bg-${colorClass}-50 text-${colorClass}-600 rounded shadow border border-${colorClass}-100">
+            <i data-lucide="${iconName}" class="w-8 h-8"></i>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+
+      // Display an clean user-facing error message
+      function showError(msg) {
+        elErrorMessage.textContent = msg;
+        elErrorContainer.classList.remove('hidden');
+        elProcessingSection.classList.add('hidden');
+        elUploadSection.classList.remove('hidden');
+        state.file = null;
+      }
+
+      // Update loading status feedback
+      function updateProgress(percentage, text) {
+        elProgressBarFill.style.width = `${percentage}%`;
+        elProcPctText.textContent = `${percentage}%`;
+        elProcStageText.textContent = text;
+      }
+
+      // Built-in basic English dictionary for OCR word validation
+      const COMMON_WORDS = new Set([
+        // Single letter words:
+        "a", "i",
+
+        // 2-letter words:
+        "am", "an", "as", "at", "be", "by", "do", "go", "he", "if", "in", "is", "it", "me", "my", "no", "of", "on", "or", "so", "to", "up", "us", "we", "hi", "ox", "by", "if", "to", "go", "me", "my", "no", "of", "on", "or", "so", "up", "us", "we",
+
+        // 3-letter words:
+        "act", "add", "all", "and", "any", "are", "bad", "bar", "bat", "bed", "big", "bit", "box", "boy", "bus", "but", "buy", "can", "car", "cat", "cow", "cry", "cup", "cut", "dad", "day", "did", "die", "dig", "dog", "dot", "dry", "due", "ear", "eat", "end", "era", "eye", "far", "fat", "few", "fit", "fix", "fly", "for", "fox", "fun", "fur", "gas", "get", "god", "gum", "gun", "guy", "had", "has", "hat", "her", "him", "his", "hit", "hot", "how", "ice", "ill", "its", "jaw", "jet", "job", "joy", "key", "kid", "lab", "lad", "law", "lay", "led", "leg", "let", "lid", "lie", "lip", "lit", "log", "low", "mad", "man", "map", "mat", "may", "men", "met", "mix", "mom", "mud", "mug", "net", "new", "nod", "not", "now", "nut", "oak", "odd", "off", "oil", "old", "one", "our", "out", "own", "pad", "pan", "pay", "pen", "pet", "pie", "pig", "pin", "pot", "pry", "pub", "rag", "ran", "raw", "ray", "red", "rib", "rid", "rip", "rob", "rod", "rub", "run", "sad", "sat", "saw", "say", "sea", "see", "set", "sew", "she", "shy", "sin", "sip", "sir", "sit", "six", "ski", "sky", "sly", "son", "spy", "sub", "sun", "tap", "tax", "tea", "ten", "the", "thy", "tie", "tin", "tip", "toe", "ton", "top", "toy", "try", "tub", "two", "use", "van", "vet", "via", "war", "was", "way", "web", "wed", "wet", "who", "why", "wig", "win", "wit", "won", "yes", "yet", "zip",
+
+        // Common 4+ letter words specifically:
+        "this", "that", "them", "then", "they", "with", "from", "each", "were", "been", "some", "good", "make", "time", "into", "your", "only", "come", "more", "over", "some", "here", "work", "word", "copy", "book", "read", "page", "text", "very", "also", "file", "many", "even", "most", "back", "well", "down", "same", "love", "life",
+        "about", "above", "after", "again", "against", "all", "also", "always", "another", "any", "around", "away", "because", "before", "began", "between", "both", "called", "came", "cannot", "change", "checked", "class", "clear", "close", "come", "could", "course", "day", "days", "enough", "even", "every", "eyes", "face", "fact", "feel", "find", "first", "five", "following", "form", "found", "four", "gave", "general", "give", "given", "great", "group", "half", "hand", "hands", "head", "hear", "heard", "held", "himself", "home", "house", "however", "important", "interest", "java", "just", "keep", "kind", "knew", "known", "land", "large", "last", "later", "least", "left", "less", "light", "like", "line", "little", "long", "looked", "made", "matter", "mean", "might", "mind", "mother", "much", "must", "name", "near", "never", "next", "night", "nothing", "number", "often", "once", "open", "order", "others", "people", "place", "point", "program", "put", "reader", "right", "room", "said", "school", "second", "seem", "seemed", "sent", "several", "shall", "should", "show", "side", "since", "small", "something", "soon", "sound", "still", "success", "such", "sure", "take", "together", "took", "toward", "turn", "turned", "under", "until", "upon", "voice", "walked", "want", "wanted", "whether", "which", "while", "white", "whole", "will", "within", "without", "world", "would", "year", "years", "young"
+      ]);
+
+      // Evaluation heuristic to filter potential spacing merge actions
+      function shouldKeepMerged(merged, originalTokens) {
+        const mergedLower = merged.toLowerCase();
+        
+        // If the merged word is a recognized common English word, keep it
+        if (COMMON_WORDS.has(mergedLower)) {
+          return true;
+        }
+        
+        // Visual/phonetic English-like heuristic check
+        const hasVowel = /[aeiouyAEIOUY]/.test(merged);
+        const lengthMatch = merged.length > 2;
+        const isTooConsonantly = /[bcdfghjklmnpqrstvwxz]{4,}/i.test(merged);
+        const isEnglishLike = hasVowel && lengthMatch && !isTooConsonantly;
+        
+        if (isEnglishLike) {
+          // If the components are both individually valid common English words (e.g. "a" and "book")
+          // then keeping them separate is safer than joining them into "abook".
+          if (originalTokens.length === 2) {
+            const t1 = originalTokens[0].toLowerCase();
+            const t2 = originalTokens[1].toLowerCase();
+            if (COMMON_WORDS.has(t1) && COMMON_WORDS.has(t2)) {
+              return false; // Keep them separate!
+            }
+          }
+          return true;
+        }
+        
+        return false;
+      }
+
+      // OCR post-processing function to fix spacing artifacts
+      function postProcessOCRText(rawText) {
+        if (!rawText) return "";
+
+        // Normalize character representations
+        let normalized = rawText
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u2013\u2014]/g, '-');
+
+        // Step 4: Split into paragraphs by blank lines (double newlines or more)
+        const paragraphs = normalized.split(/\n\s*\n+/);
+
+        const processedParagraphs = paragraphs.map(p => {
+          // Join mid-paragraph line breaks (single newlines) into spaces
+          let cleanParagraph = p.replace(/\n/g, ' ');
+
+          // Normalize multiple consecutive spaces into one
+          cleanParagraph = cleanParagraph.replace(/\s+/g, ' ').trim();
+
+          // Step 1: Remove spaces between individual characters that form a word.
+          // Specifically: replace any single character followed by a space and another single character (repeating)
+          let step1 = cleanParagraph;
+          let prevText;
+          do {
+            prevText = step1;
+            step1 = step1.replace(/\b([a-zA-Z0-9])\s+(?=[a-zA-Z0-9]\b)/gi, '$1');
+          } while (step1 !== prevText);
+
+          // Use regex to collapse patterns like "T hi s" -> "This" and "c opy" -> "copy".
+          // Match single character followed by larger block or vice versa
+          step1 = step1.replace(/\b([a-zA-Z0-9])\s+([a-zA-Z0-9]{2,})\b/gi, (match, left, right) => {
+            const merged = left + right;
+            if (shouldKeepMerged(merged, [left, right])) {
+              return merged;
+            }
+            return match;
+          });
+
+          step1 = step1.replace(/\b([a-zA-Z0-9]{2,})\s+([a-zA-Z0-9])\b/gi, (match, left, right) => {
+            const merged = left + right;
+            if (shouldKeepMerged(merged, [left, right])) {
+              return merged;
+            }
+            return match;
+          });
+
+          // Step 2: Fix over-spaced words by merging tokens that are likely one word.
+          // Split text into tokens (words and punctuation)
+          const tokenRegex = /[a-zA-Z0-9']+|[^a-zA-Z0-9\s]/g;
+          const tokens = step1.match(tokenRegex) || [];
+
+          const resultTokens = [];
+          let idx = 0;
+
+          while (idx < tokens.length) {
+            let token = tokens[idx];
+            const isPunc = /[^a-zA-Z0-9']/.test(token);
+
+            if (isPunc || token.length > 2) {
+              resultTokens.push(token);
+              idx++;
+            } else {
+              // Start a potential merge run of consecutive `<= 2` tokens
+              let run = [token];
+              let nextIdx = idx + 1;
+              while (nextIdx < tokens.length) {
+                const nextToken = tokens[nextIdx];
+                const isNextPunc = /[^a-zA-Z0-9']/.test(nextToken);
+                if (isNextPunc || nextToken.length > 3) {
+                  break;
+                }
+                run.push(nextToken);
+                nextIdx++;
+              }
+
+              const merged = run.join('');
+
+              // Verify Step 3: validate using dictionary/heuristics
+              if (run.length > 1 && shouldKeepMerged(merged, run)) {
+                resultTokens.push(merged);
+              } else {
+                run.forEach(t => resultTokens.push(t));
+              }
+              idx = nextIdx;
+            }
+          }
+
+          // Step 3 (Second Pass): run a word-by-word merge heuristic check on adjacent tokens
+          let mergedTokens = [...resultTokens];
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (let k = 0; k < mergedTokens.length - 1; k++) {
+              const t1 = mergedTokens[k];
+              const t2 = mergedTokens[k + 1];
+
+              // Skip punctuation
+              if (/[^a-zA-Z0-9']/.test(t1) || /[^a-zA-Z0-9']/.test(t2)) {
+                continue;
+              }
+
+              const merged = t1 + t2;
+              const mergedLower = merged.toLowerCase();
+
+              let shouldMerge = false;
+              if (COMMON_WORDS.has(mergedLower)) {
+                shouldMerge = true;
+              } else if (t1.length <= 2 || t2.length <= 2) {
+                shouldMerge = shouldKeepMerged(merged, [t1, t2]);
+              }
+
+              if (shouldMerge) {
+                mergedTokens.splice(k, 2, merged);
+                changed = true;
+                break;
+              }
+            }
+          }
+
+          // Reconstruct paragraph joining words cleanly with standard spaces
+          let paragraphText = "";
+          for (let k = 0; k < mergedTokens.length; k++) {
+            const tok = mergedTokens[k];
+            const isPunc = /[^a-zA-Z0-9']/.test(tok);
+            if (k === 0) {
+              paragraphText += tok;
+            } else {
+              if (isPunc) {
+                paragraphText += tok;
+              } else {
+                paragraphText += " " + tok;
+              }
+            }
+          }
+
+          // Refine spacing before punctuation marks
+          paragraphText = paragraphText
+            .replace(/\s+([.,;:?!'])/g, '$1')
+            .replace(/([$])\s+/g, '$1');
+
+          return paragraphText.trim();
+        });
+
+        // Join paragraphs with double newlines
+        return processedParagraphs.filter(p => p.length > 0).join('\n\n');
+      }
+
+      // Pretokenise parsed layout text to support highlighting individual click span matches
+      function tokenizeFullText(text) {
+        if (!text || !text.trim()) {
+          return { tokens: [], fullText: "" };
+        }
+        
+        // Clean characters for clean alignment during Speech Synthesis
+        // Convert smart quotes/dashes to normal ones to ensure SpeechSynthesisUtterance matching offsets
+        let normalized = text
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u2013\u2014]/g, '-');
+
+        const parts = normalized.split(/(\s+)/);
+        let charOffset = 0;
+        const tokens = [];
+        let wordCount = 0;
+        
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (part.length === 0) continue;
+          
+          const isSpace = /^\s+$/.test(part);
+          if (isSpace) {
+            tokens.push({
+              type: 'space',
+              text: part,
+              charStart: charOffset,
+              charEnd: charOffset + part.length
+            });
+          } else {
+            tokens.push({
+              type: 'word',
+              text: part,
+              charStart: charOffset,
+              charEnd: charOffset + part.length,
+              wordIndex: wordCount
+            });
+            wordCount++;
+          }
+          charOffset += part.length;
+        }
+        return { tokens, fullText: normalized };
+      }
+
+      // Helper to truncate filename elegantly
+      function truncateFilename(name, maxLen) {
+        if (!name) return "";
+        if (name.length <= maxLen) return name;
+        const extIndex = name.lastIndexOf('.');
+        if (extIndex === -1) return name.slice(0, maxLen - 3) + '...';
+        const ext = name.slice(extIndex);
+        const base = name.slice(0, extIndex);
+        const charsLeft = maxLen - ext.length - 3;
+        if (charsLeft <= 0) return name.slice(0, maxLen - 3) + '...';
+        return base.slice(0, charsLeft) + '...' + ext;
+      }
+
+      // Helper to normalize characters standardly
+      function normalizeText(text) {
+        if (!text) return "";
+        return text
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u2013\u2014]/g, '-');
+      }
+
+      // Core parser for PDF document formats
+      async function processPDFDocument(file) {
+        try {
+          updateProgress(5, "Resolving document container...");
+          const arrayBuffer = await file.arrayBuffer();
+          
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const totalPages = pdf.numPages;
+          const extractedPagesText = [];
+          const extractedPagesWordPositions = [];
+          
+          updateProgress(10, `Accessing structured PDF indexing (${totalPages} pages total)...`);
+          
+          for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            updateProgress(
+              10 + Math.round(((pageNum - 1) / totalPages) * 80), 
+              `Extracting text from page ${pageNum} of ${totalPages}...`
+            );
+            
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            let pageText = textContent.items.map(item => item.str).join(' ');
+            
+            // Clean consecutive spaces
+            pageText = pageText.replace(/\s+/g, ' ').trim();
+            
+            // Analyze density counts. Fallback to Tesseract OCR if scanned
+            const totalWords = pageText.split(/\s+/).filter(w => w.length > 0).length;
+            const pageWordsPositions = [];
+            const viewport = page.getViewport({ scale: 1.5 });
+            
+            if (totalWords >= 15) {
+              // Extract positions of each word
+              for (const item of textContent.items) {
+                const str = item.str || "";
+                const words = str.trim().split(/\s+/).filter(w => w.length > 0);
+                if (words.length === 0) continue;
+                
+                try {
+                  const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                  const canvasX = tx[4];
+                  const canvasY = tx[5];
+                  const canvasHeight = item.height ? item.height * viewport.scale : Math.abs(item.transform[3] * viewport.scale);
+                  const canvasWidth = item.width * viewport.scale;
+                  
+                  const count = words.length;
+                  const wordWidth = canvasWidth / count;
+                  
+                  for (let j = 0; j < count; j++) {
+                    pageWordsPositions.push({
+                      word: words[j],
+                      pageIndex: pageNum,
+                      x: canvasX + j * wordWidth,
+                      y: canvasY - canvasHeight, // top Y of word bounding box
+                      w: wordWidth,
+                      h: canvasHeight
+                    });
+                  }
+                } catch (err) {
+                  for (let j = 0; j < words.length; j++) {
+                    pageWordsPositions.push({
+                      word: words[j],
+                      pageIndex: pageNum,
+                      missing: true
+                    });
+                  }
+                }
+              }
+              
+              pageText = pageWordsPositions.map(w => w.word).join(' ');
+              pageText = normalizeText(pageText);
+            } else {
+              updateProgress(
+                10 + Math.round(((pageNum - 0.5) / totalPages) * 80), 
+                `Page ${pageNum} appears scanned. Rendering & running OCR...`
+              );
+              
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d');
+              const ocrViewport = page.getViewport({ scale: 2.0 }); // High resolution scale for OCR
+              canvas.height = ocrViewport.height;
+              canvas.width = ocrViewport.width;
+              
+              await page.render({ canvasContext: context, viewport: ocrViewport }).promise;
+              
+              // Tesseract engine
+              const ocrResult = await Tesseract.recognize(
+                canvas,
+                'eng',
+                {
+                  logger: m => {
+                    if (m.status === 'recognizing text') {
+                      const completePct = Math.round(m.progress * 100);
+                      const statePct = 10 + Math.round((((pageNum - 1) + m.progress) / totalPages) * 80);
+                      updateProgress(statePct, `OCR Processing Page ${pageNum}: ${completePct}%`);
+                    }
+                  }
+                }
+              );
+              pageText = postProcessOCRText(ocrResult.data.text);
+              
+              const words = pageText.split(/\s+/).filter(w => w.length > 0);
+              for (const w of words) {
+                pageWordsPositions.push({
+                  word: w,
+                  pageIndex: pageNum,
+                  missing: true
+                });
+              }
+            }
+            
+            extractedPagesText.push(pageText);
+            extractedPagesWordPositions.push(pageWordsPositions);
+          }
+          
+          updateProgress(100, "PDF analysis complete!");
+          
+          setTimeout(() => {
+            initializeReaderWorkspace(file.name, extractedPagesText, extractedPagesWordPositions);
+          }, 350);
+          
+        } catch (e) {
+          console.error("PDF Parsing error: ", e);
+          showError(`Failed to process this PDF: ${e.message || e}`);
+        }
+      }
+
+      // Core parser for uploaded classical Images
+      async function processImageOCR(file) {
+        try {
+          updateProgress(10, "Extracting page image buffer...");
+          
+          const ocrResult = await Tesseract.recognize(
+            file,
+            'eng',
+            {
+              logger: m => {
+                if (m.status === 'recognizing text') {
+                  const completePct = Math.round(m.progress * 100);
+                  const statePct = 10 + Math.round(m.progress * 85);
+                  updateProgress(statePct, `OCR Character Recognition: ${completePct}%`);
+                }
+              }
+            }
+          );
+          
+          const pageText = postProcessOCRText(ocrResult.data.text);
+          const pageWordsPositions = [];
+          
+          const words = pageText.split(/\s+/).filter(w => w.length > 0);
+          for (const w of words) {
+            pageWordsPositions.push({
+              word: w,
+              pageIndex: 1,
+              missing: true
+            });
+          }
+          
+          updateProgress(100, "Image OCR complete!");
+          
+          setTimeout(() => {
+            initializeReaderWorkspace(file.name, [pageText], [pageWordsPositions]);
+          }, 350);
+          
+        } catch (e) {
+          console.error("Image OCR error: ", e);
+          showError(`Failed to read characters from this image: ${e.message || e}`);
+        }
+      }
+
+      // Setup states and open Workspace Screen UI
+      async function initializeReaderWorkspace(fileName, pages, pagesWordPositions) {
+        state.pagesText = pages;
+        state.currentPage = 1;
+        state.fileName = fileName;
+        
+        // Truncate filename & show layout header info
+        elTopFilename.textContent = truncateFilename(fileName, 28);
+        elTopFilename.classList.remove('hidden');
+        elHeaderReset.classList.remove('hidden');
+        
+        // Prepare concatenated word ranges
+        prepareAllWords(pagesWordPositions);
+
+        // Switch panel UI
+        elProcessingSection.classList.add('hidden');
+        elReaderSection.classList.remove('hidden');
+        
+        // Load target page content visual and update labels
+        goToPage(1);
+      }
+
+      // Prepares consolidated list of all words for the TTS system
+      function prepareAllWords(pagesWordPositions) {
+        state.allWords = [];
+        state.wordPositions = [];
+        state.pageWordIndices = [];
+        
+        let startWordIdx = 0;
+        for (let i = 0; i < state.pagesText.length; i++) {
+          const text = state.pagesText[i] || "";
+          
+          // Split by whitespace spaces, filtering empty tokens
+          const words = text.split(/\s+/).filter(w => w.length > 0);
+          state.allWords = state.allWords.concat(words);
+          
+          // Align word positions
+          const positions = pagesWordPositions && pagesWordPositions[i] ? pagesWordPositions[i] : null;
+          if (positions && positions.length === words.length) {
+            state.wordPositions = state.wordPositions.concat(positions);
+          } else {
+            // Create fallback positions
+            const fallback = words.map(w => ({
+              word: w,
+              pageIndex: i + 1,
+              missing: true
+            }));
+            state.wordPositions = state.wordPositions.concat(fallback);
+          }
+          
+          state.pageWordIndices.push({
+            start: startWordIdx,
+            count: words.length,
+            end: startWordIdx + words.length // exclusive boundary
+          });
+          
+          startWordIdx += words.length;
+        }
+      }
+
+      function getPageForWordIndex(wordIdx) {
+        for (let i = 0; i < state.pageWordIndices.length; i++) {
+          const r = state.pageWordIndices[i];
+          if (wordIdx >= r.start && wordIdx < r.end) {
+            return i + 1; // page numbers are 1-indexed
+          }
+        }
+        return 1;
+      }
+      // Render actual visual viewport (Canvas or Image direct render) with highlights overlay
+      async function renderVisualPage() {
+        if (!elVisualViewerContainer) return;
+        elVisualViewerContainer.innerHTML = '';
+        
+        if (!state.file) return;
+        
+        const isPdf = state.fileType === 'application/pdf' || state.fileName.endsWith('.pdf');
+        
+        if (isPdf) {
+          try {
+            elVisualViewerContainer.innerHTML = `
+              <div class="flex flex-col items-center justify-center space-y-2 py-10 text-stone-500">
+                <div class="w-8 h-8 border-4 border-stone-300 border-t-stone-900 rounded-full animate-spin"></div>
+                <span class="text-xs font-sans tracking-wide uppercase font-bold text-stone-400">Rendering high-res page view...</span>
+              </div>
+            `;
+            
+            const arrayBuffer = await state.file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(state.currentPage);
+            
+            elVisualViewerContainer.innerHTML = ''; // slice loader
+            
+            // Create a position: relative container to hold both canvases
+            const wrapper = document.createElement('div');
+            wrapper.className = 'relative inline-block';
+            
+            const pdfCanvas = document.createElement('canvas');
+            pdfCanvas.id = 'pdf-render-canvas';
+            pdfCanvas.className = 'max-w-full h-auto border border-[#D1CDC7] shadow-sm bg-white rounded-sm block';
+            
+            const highlightCanvas = document.createElement('canvas');
+            highlightCanvas.id = 'highlightCanvas';
+            highlightCanvas.className = 'absolute top-0 left-0 pointer-events-none block';
+            
+            wrapper.appendChild(pdfCanvas);
+            wrapper.appendChild(highlightCanvas);
+            elVisualViewerContainer.appendChild(wrapper);
+            
+            const context = pdfCanvas.getContext('2d');
+            const viewport = page.getViewport({ scale: 1.5 }); // PDF page scale 1.5 for crisp visual output
+            pdfCanvas.height = viewport.height;
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.style.width = '100%';
+            pdfCanvas.style.height = 'auto'; // allow responsive scaling
+            
+            await page.render({ canvasContext: context, viewport }).promise;
+            
+            // Sync highlightCanvas configuration
+            highlightCanvas.width = pdfCanvas.width;
+            highlightCanvas.height = pdfCanvas.height;
+            highlightCanvas.style.width = pdfCanvas.style.width;
+            highlightCanvas.style.height = pdfCanvas.style.height;
+
+            // Clicking target on wrapper to play from clicked word
+            wrapper.addEventListener('click', (e) => {
+              const rect = pdfCanvas.getBoundingClientRect();
+              const clickX = ((e.clientX - rect.left) / rect.width) * pdfCanvas.width;
+              const clickY = ((e.clientY - rect.top) / rect.height) * pdfCanvas.height;
+              
+              const clickedWord = findWordAtCoordinate(state.currentPage, clickX, clickY);
+              if (clickedWord) {
+                speakWordsFromOffset(clickedWord.wordIndex);
+              }
+            });
+
+            // Hover cursor adjustment
+            wrapper.addEventListener('mousemove', (e) => {
+              const rect = pdfCanvas.getBoundingClientRect();
+              const hoverX = ((e.clientX - rect.left) / rect.width) * pdfCanvas.width;
+              const hoverY = ((e.clientY - rect.top) / rect.height) * pdfCanvas.height;
+              
+              const word = findWordAtCoordinate(state.currentPage, hoverX, hoverY);
+              if (word) {
+                pdfCanvas.style.cursor = 'pointer';
+                highlightCanvas.style.cursor = 'pointer';
+              } else {
+                pdfCanvas.style.cursor = 'default';
+                highlightCanvas.style.cursor = 'default';
+              }
+            });
+
+            // Update current page highlights
+            updateHighlightsAndBar(state.currentWordIndex);
+            
+            if (elDebugStats) {
+              const range = state.pageWordIndices[state.currentPage - 1];
+              const wordsCount = range ? range.count : 0;
+              elDebugStats.textContent = `PDF PAGE ${state.currentPage} | ${wordsCount} WORDS EXTRACTED`;
+            }
+          } catch (e) {
+            console.error("Render Page canvas Error: ", e);
+            elVisualViewerContainer.innerHTML = `<p class="text-red-600 font-serif text-center p-4">Error loading page visual render path: ${e.message}</p>`;
+          }
+        } else {
+          // Image displays
+          try {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(state.file);
+            img.className = 'max-w-full max-h-[65vh] object-contain border border-[#D1CDC7] shadow-sm bg-white rounded-sm';
+            
+            img.onload = () => {
+              // Update fallback now reading bar context since images have no positions
+              updateHighlightsAndBar(state.currentWordIndex);
+              if (elDebugStats) {
+                const range = state.pageWordIndices[0];
+                const wordsCount = range ? range.count : 0;
+                elDebugStats.textContent = `IMAGE SOURCE | ${wordsCount} WORDS EXTRACTED`;
+              }
+            };
+            
+            elVisualViewerContainer.appendChild(img);
+          } catch (e) {
+            console.error("Image load visual error: ", e);
+            elVisualViewerContainer.innerHTML = `<p class="text-red-600 font-serif text-center p-4">Error displaying image visual layout: ${e.message}</p>`;
+          }
+        }
+      }
+
+      // Sync and maintain state of Prev and Next button capabilities and page nav visibility
+      function updateNavigationStats() {
+        const total = state.pagesText.length;
+        elPageCounterLabel.textContent = `Page ${state.currentPage} of ${total}`;
+        
+        // Pager numerical indicators format e.g. "01 / 05"
+        const curPad = String(state.currentPage).padStart(2, '0');
+        const totPad = String(total).padStart(2, '0');
+        elPagerStatLabel.textContent = `${curPad} / ${totPad}`;
+        
+        elBtnPrevPage.disabled = state.currentPage === 1;
+        elBtnNextPage.disabled = state.currentPage === total;
+
+        // Hide navigation entirely if document contains only 1 page
+        if (total <= 1) {
+          elPdfNavigation.className = "hidden";
+        } else {
+          elPdfNavigation.className = "flex items-center space-x-2 w-full md:w-auto justify-center md:justify-end";
+        }
+      }
+
+      // Page Navigation functions
+      function goToPage(pageNum) {
+        const total = state.pagesText.length;
+        if (pageNum < 1 || pageNum > total) return;
+        
+        state.currentPage = pageNum;
+        renderVisualPage();
+        updateNavigationStats();
+        
+        // Keep speech aligned or sync starting word indices of newly selected page
+        const range = state.pageWordIndices[pageNum - 1];
+        if (range) {
+          if (state.isPlaying && !state.isPaused) {
+            speakWordsFromOffset(range.start);
+          } else {
+            state.currentWordIndex = range.start;
+            updateHighlightsAndBar(state.currentWordIndex);
+          }
+        }
+      }
+
+      elBtnPrevPage.addEventListener('click', () => {
+        goToPage(state.currentPage - 1);
+      });
+
+      elBtnNextPage.addEventListener('click', () => {
+        goToPage(state.currentPage + 1);
+      });
+
+      // Update now reading text bar context with amber highlight and context words
+      function updateNowReadingBar(wordIdx) {
+        if (!elNowReadingText) return;
+        
+        if (!state.allWords || state.allWords.length === 0) {
+          elNowReadingText.innerHTML = `<span class="text-amber-800 italic text-sm">Parsing text content...</span>`;
+          return;
+        }
+        
+        const start = Math.max(0, wordIdx - 3);
+        const end = Math.min(state.allWords.length, wordIdx + 9); // current + 8 words after
+        
+        elNowReadingText.innerHTML = '';
+        
+        if (start > 0) {
+          const elEllipsis = document.createElement('span');
+          elEllipsis.className = 'text-stone-400 font-serif text-lg tracking-wide mr-2';
+          elEllipsis.textContent = '...';
+          elNowReadingText.appendChild(elEllipsis);
+        }
+        
+        for (let i = start; i < end; i++) {
+          const wordVal = state.allWords[i];
+          const span = document.createElement('span');
+          span.className = 'font-serif text-lg tracking-wide transition-all mx-1.5 my-1 inline-block select-text py-0.5 rounded';
+          span.textContent = wordVal;
+          
+          if (i === wordIdx) {
+            // highlighted in amber (#FAC775 bg, #412402 text)
+            span.className += ' bg-[#FAC775] text-[#412402] font-semibold px-3 py-1 shadow-sm scale-110';
+          } else {
+            span.className += ' text-stone-600 hover:text-stone-900 cursor-pointer';
+            
+            // Allow manual click on words inside the context bar to jump narration there
+            span.addEventListener('click', () => {
+              speakWordsFromOffset(i);
+            });
+          }
+          elNowReadingText.appendChild(span);
+        }
+        
+        if (end < state.allWords.length) {
+          const elEllipsis = document.createElement('span');
+          elEllipsis.className = 'text-stone-400 font-serif text-lg tracking-wide mr-2';
+          elEllipsis.textContent = '...';
+          elNowReadingText.appendChild(elEllipsis);
+        }
+      }
+
+      // Search the clicked coordinate inside wordPositions
+      function findWordAtCoordinate(pageIndex, targetX, targetY) {
+        if (!state.wordPositions) return null;
+        
+        for (let i = 0; i < state.wordPositions.length; i++) {
+          const pos = state.wordPositions[i];
+          if (pos && pos.pageIndex === pageIndex && !pos.missing) {
+            // Check bounding box intersection with a tiny vertical padding for ease of clicking on touch screens
+            const paddingX = 4;
+            const paddingY = 6;
+            if (
+              targetX >= pos.x - paddingX &&
+              targetX <= pos.x + pos.w + paddingX &&
+              targetY >= pos.y - paddingY &&
+              targetY <= pos.y + pos.h + paddingY
+            ) {
+              return { ...pos, wordIndex: i };
+            }
+          }
+        }
+        return null;
+      }
+
+      // Safe rounded rectangle drawer
+      function drawRoundRect(ctx, x, y, width, height, radius) {
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(x, y, width, height, radius);
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(x + radius, y);
+          ctx.lineTo(x + width - radius, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+          ctx.lineTo(x + width, y + height - radius);
+          ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+          ctx.lineTo(x + radius, y + height);
+          ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+          ctx.lineTo(x, y + radius);
+          ctx.quadraticCurveTo(x, y, x + radius, y);
+        }
+      }
+
+      // Draw word highlight on canvas overlay
+      function drawCanvasHighlight(wordIdx) {
+        const hlCanvas = document.getElementById('highlightCanvas');
+        if (!hlCanvas) return;
+        
+        const ctx = hlCanvas.getContext('2d');
+        ctx.clearRect(0, 0, hlCanvas.width, hlCanvas.height);
+        
+        if (!state.wordPositions || state.wordPositions.length === 0) return;
+        
+        const pos = state.wordPositions[wordIdx];
+        if (!pos) return;
+        
+        // Render highlight only if word is on the active page, has coords, and speech is active or paused
+        if (pos.pageIndex === state.currentPage && !pos.missing && (state.isPlaying || state.isPaused)) {
+          const x = pos.x;
+          const y = pos.y;
+          const w = pos.w;
+          const h = pos.h;
+          
+          ctx.beginPath();
+          drawRoundRect(ctx, x - 1.5, y - 1, w + 3, h + 2, 3);
+          
+          ctx.fillStyle = 'rgba(250, 199, 117, 0.45)'; // Amber gold, semi-transparent
+          ctx.fill();
+          
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = 'rgba(186, 117, 23, 0.7)'; // Outline highlight
+          ctx.stroke();
+        }
+      }
+
+      // Check if positions exist for the current word
+      function hasPositionsForCurrentWord(wordIdx) {
+        if (!state.wordPositions || state.wordPositions.length === 0) return false;
+        const pos = state.wordPositions[wordIdx];
+        return pos && !pos.missing;
+      }
+
+      // Master visibility toggle and highlight orchestrator
+      function updateHighlightsAndBar(wordIdx) {
+        const hasPositionsVal = hasPositionsForCurrentWord(wordIdx);
+        
+        if (hasPositionsVal) {
+          // Digital PDF text: overlay canvas highlight, hide context bar
+          if (elNowReadingBar) elNowReadingBar.classList.add('hidden');
+          drawCanvasHighlight(wordIdx);
+        } else {
+          // Scanned page or Image: fall back to context bar
+          if (elNowReadingBar) elNowReadingBar.classList.remove('hidden');
+          
+          // Clear any canvas highlight
+          const hlCanvas = document.getElementById('highlightCanvas');
+          if (hlCanvas) {
+            const ctx = hlCanvas.getContext('2d');
+            ctx.clearRect(0, 0, hlCanvas.width, hlCanvas.height);
+          }
+        }
+        
+        // Sync context text content inside the bar
+        updateNowReadingBar(wordIdx);
+      }
+
+      // Play speech synthesiser words list from selected index
+      function speakWordsFromOffset(wordIdx) {
+        if (!window.speechSynthesis) return;
+
+        // Reset state for Rate transition if already speaking
+        if (window.speechSynthesis.speaking) {
+          state.isTransitioningRate = true; 
+          window.speechSynthesis.cancel();
+        }
+
+        state.isPlaying = true;
+        state.isPaused = false;
+        state.currentWordIndex = wordIdx;
+        updatePlaybackUI();
+
+        if (state.allWords.length === 0) return;
+
+        // Truncate starting from the target index
+        const subWords = state.allWords.slice(wordIdx);
+        const textToNarrate = subWords.join(' ');
+        
+        const utterance = new SpeechSynthesisUtterance(textToNarrate);
+
+        // Configure speed
+        utterance.rate = parseFloat(elRateRange.value) || 1.0;
+
+        // Configure selected voice
+        const selectedVoiceName = elVoiceSelect.value;
+        if (selectedVoiceName) {
+          const matchedVoice = voices.find(v => v.name === selectedVoiceName);
+          if (matchedVoice) {
+            utterance.voice = matchedVoice;
+          }
+        }
+
+        // Map character positions back to list index
+        const wordOffsets = [];
+        let currentOffset = 0;
+        for (let i = 0; i < subWords.length; i++) {
+          const w = subWords[i];
+          wordOffsets.push({
+            absoluteIdx: wordIdx + i,
+            startChar: currentOffset,
+            endChar: currentOffset + w.length
+          });
+          currentOffset += w.length + 1; // plus single space separator
+        }
+
+        // Boundary tracker event
+        utterance.onboundary = function(event) {
+          if (event.name === 'word') {
+            const boundaryCharIdx = event.charIndex;
+            
+            const match = wordOffsets.find(offset => 
+              boundaryCharIdx >= offset.startChar && boundaryCharIdx <= offset.endChar
+            );
+            
+            if (match) {
+              state.currentWordIndex = match.absoluteIdx;
+              
+              // Automatically turn corresponding PDF view representation
+              const pageIdx = getPageForWordIndex(state.currentWordIndex);
+              if (pageIdx !== state.currentPage) {
+                state.currentPage = pageIdx;
+                renderVisualPage();
+                updateNavigationStats();
+              } else {
+                updateHighlightsAndBar(state.currentWordIndex);
+              }
+            }
+          }
+        };
+
+        utterance.onend = function() {
+          if (state.isTransitioningRate) {
+            state.isTransitioningRate = false;
+            return;
+          }
+          stopSpeech();
+        };
+
+        utterance.onerror = function(err) {
+          console.error("Speech Synthesis Utterance Error:", err);
+          if (state.isTransitioningRate) {
+            state.isTransitioningRate = false;
+            return;
+          }
+          stopSpeech();
+        };
+
+        state.currentUtterance = utterance;
+        window.speechSynthesis.speak(utterance);
+      }
+
+      // Sync CSS buttons styled classes on play state alternates
+      function updatePlaybackUI() {
+        if (state.isPlaying && !state.isPaused) {
+          // Speak is active
+          elPlayIcon.setAttribute('data-lucide', 'headphones');
+          elBtnPlay.className = "p-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded transition shadow-md active:scale-95 flex items-center justify-center w-11 h-11 ring-4 ring-emerald-500/20";
+          elBtnPlay.title = "Playback Currently Active";
+          
+          elBtnPause.className = "p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center";
+          elBtnPause.title = "Pause Playback";
+        } else if (state.isPaused) {
+          // Paused: Make play/resume button color CHANGE dramatically noticeable with gold pulsing glow!
+          elPlayIcon.setAttribute('data-lucide', 'play');
+          elBtnPlay.className = "p-3 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold border border-amber-600 rounded transition shadow-lg active:scale-95 flex items-center justify-center w-11 h-11 ring-4 ring-amber-500/40 animate-pulse";
+          elBtnPlay.title = "Click to Resume Playback";
+          
+          elBtnPause.className = "p-2.5 bg-stone-300 border border-stone-400 text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center font-semibold";
+          elBtnPause.title = "Playback Paused";
+        } else {
+          // Off: Reset to classic neutral Editorial aesthetic
+          elPlayIcon.setAttribute('data-lucide', 'play');
+          elBtnPlay.className = "p-3 bg-stone-950 hover:bg-stone-850 text-white rounded transition shadow-sm active:scale-95 flex items-center justify-center w-11 h-11";
+          elBtnPlay.title = "Start Playback";
+          
+          elBtnPause.className = "p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center";
+          elBtnPause.title = "Pause Playback";
+        }
+        lucide.createIcons();
+      }
+
+      // Stop speech synthesizer block
+      function stopSpeech() {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        
+        state.isPlaying = false;
+        state.isPaused = false;
+        state.currentWordIndex = 0;
+        updatePlaybackUI();
+        updateNowReadingBar(0);
+
+        // Clear canvas overlay
+        const hlCanvas = document.getElementById('highlightCanvas');
+        if (hlCanvas) {
+          const ctx = hlCanvas.getContext('2d');
+          ctx.clearRect(0, 0, hlCanvas.width, hlCanvas.height);
+        }
+      }
+
+      // Event Listeners for TTS controlsbar
+      elBtnPlay.addEventListener('click', () => {
+        if (!state.isPlaying) {
+          speakWordsFromOffset(state.currentWordIndex);
+        } else if (state.isPaused) {
+          window.speechSynthesis.resume();
+          state.isPaused = false;
+          state.isPlaying = true;
+          updatePlaybackUI();
+        }
+      });
+
+      elBtnPause.addEventListener('click', () => {
+        if (state.isPlaying && !state.isPaused) {
+          window.speechSynthesis.pause();
+          state.isPaused = true;
+          updatePlaybackUI();
+        }
+      });
+
+      elBtnStop.addEventListener('click', () => {
+        stopSpeech();
+      });
+
+      // Narrator speed events handling
+      elRateRange.addEventListener('input', () => {
+        const speed = parseFloat(elRateRange.value).toFixed(1);
+        elRateDisplay.textContent = `${speed}×`;
+      });
+
+      elRateRange.addEventListener('change', () => {
+        // If speaking, restart from active index so that the SpeechSynthesisUtterance applies rate change immediately
+        if (state.isPlaying && !state.isPaused) {
+          speakWordsFromOffset(state.currentWordIndex);
+        }
+      });
+
+      // Re-trigger playback if voice changed during active speech
+      elVoiceSelect.addEventListener('change', () => {
+        if (state.isPlaying && !state.isPaused) {
+          speakWordsFromOffset(state.currentWordIndex);
+        }
+      });
+
+      // Clear document content and revert screen interfaces to selection setup
+      function resetToLandingScreen() {
+        stopSpeech();
+        
+        // Reset full state
+        state.file = null;
+        state.fileName = '';
+        state.fileType = '';
+        state.pagesText = [];
+        state.allWords = [];
+        state.pageWordIndices = [];
+        state.currentPage = 1;
+
+        elFileInput.value = '';
+        if (elTopFilename) {
+          elTopFilename.textContent = '';
+          elTopFilename.classList.add('hidden');
+        }
+        
+        // Reset progress trackers
+        elProgressBarFill.style.width = '0%';
+        elProcPctText.textContent = '0%';
+        elProcStageText.textContent = 'Analyzing structure...';
+        elProcThumbnail.innerHTML = '';
+        
+        // Swaps screens
+        elReaderSection.classList.add('hidden');
+        elProcessingSection.classList.add('hidden');
+        elHeaderReset.classList.add('hidden');
+        elUploadSection.classList.remove('hidden');
+        elErrorContainer.classList.add('hidden');
+      }
+
+      elBtnResetHeader.addEventListener('click', resetToLandingScreen);
+
+    </script>
+  </body>
+</html>
