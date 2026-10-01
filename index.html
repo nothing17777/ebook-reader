@@ -19,6 +19,10 @@
     <!-- Tesseract.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
     
+    <!-- Markdown parser + sanitizer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
@@ -78,6 +82,25 @@
         transform: scale(1.02);
       }
       
+      /* Markdown reader */
+      .md-body { font-family: 'Lora', serif; font-size: 1.05rem; line-height: 1.8; color: #1A1A1A; max-width: 760px; margin: 0 auto; padding: 0.5rem 0.75rem; text-align: left; }
+      .md-body h1, .md-body h2, .md-body h3, .md-body h4 { font-family: 'DM Sans', sans-serif; font-weight: 700; line-height: 1.25; margin: 1.6em 0 0.6em; }
+      .md-body h1 { font-size: 1.9rem; } .md-body h2 { font-size: 1.5rem; } .md-body h3 { font-size: 1.2rem; }
+      .md-body p, .md-body ul, .md-body ol, .md-body blockquote, .md-body pre, .md-body table { margin: 0 0 1em; }
+      .md-body ul { list-style: disc; padding-left: 1.6em; } .md-body ol { list-style: decimal; padding-left: 1.6em; }
+      .md-body blockquote { border-left: 3px solid #D1CDC7; padding-left: 1em; color: #57534e; font-style: italic; }
+      .md-body code { background: #F0EDE8; padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.9em; }
+      .md-body pre { background: #F0EDE8; padding: 1em; border-radius: 4px; overflow-x: auto; }
+      .md-body pre code { background: none; padding: 0; }
+      .md-body a { color: #92400e; text-decoration: underline; }
+      .md-body img { max-width: 100%; }
+      .md-body hr { border: 0; border-top: 1px solid #D1CDC7; margin: 1.5em 0; }
+      .md-body table { border-collapse: collapse; } .md-body th, .md-body td { border: 1px solid #D1CDC7; padding: 0.3em 0.6em; }
+      .md-word { cursor: pointer; border-radius: 3px; transition: background-color 120ms; }
+      .md-word:hover { background-color: #E0DCD6; }
+      .md-word.md-line { background-color: rgba(250, 199, 117, 0.22); }
+      .md-word.md-active { background-color: rgba(250, 199, 117, 0.55); color: #1A1A1A; box-shadow: 0 0 0 2px rgba(250, 199, 117, 0.55); }
+
       /* Custom scrollbar for beautiful margins */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
@@ -129,25 +152,32 @@
           </div>
           <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-stone-900 font-sans uppercase">Bring Your Book to Life</h2>
           <p class="text-[#8C8882] max-w-md mx-auto text-sm md:text-base leading-relaxed">
-            Upload PDFs or images. Our smart engine extracts the text (with OCR if scanned) and reads it aloud with synchronous, layout-aware highlighting.
+            Upload PDFs, Markdown files or images. Our smart engine extracts the text (with OCR if scanned) and reads it aloud with synchronous, layout-aware highlighting.
           </p>
         </div>
 
         <!-- Drag & Drop Zone (Editorial Style) -->
         <div id="drop-zone" class="border border-dashed border-[#D1CDC7] hover:border-stone-900 bg-[#F0EDE8]/20 hover:bg-[#F0EDE8]/45 rounded p-8 md:p-12 cursor-pointer transition text-center group">
-          <input type="file" id="file-input" class="hidden" accept=".pdf, image/*" />
+          <input type="file" id="file-input" class="hidden" accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain,image/*" />
           <div class="flex flex-col items-center space-y-4">
             <div class="p-4 bg-stone-100 group-hover:bg-[#F0EDE8] rounded text-[#8C8882] transition shadow-sm border border-stone-200/50">
               <i data-lucide="cloud-upload" class="w-7 h-7 text-stone-700"></i>
             </div>
             <div>
               <span class="block text-stone-900 font-bold group-hover:text-stone-950 transition text-sm uppercase tracking-wide">Drag & drop your file here</span>
-              <span class="block text-[#8C8882] text-xs mt-1">Accepts PDF, Image (PNG, JPG, WEBP)</span>
+              <span class="block text-[#8C8882] text-xs mt-1">Accepts PDF, Markdown (.md), Image (PNG, JPG, WEBP)</span>
             </div>
             <button class="px-5 py-2.5 bg-[#1A1A1A] hover:bg-stone-800 text-[#FDFBF7] rounded transition font-semibold text-xs tracking-wide uppercase">
               Browse Files
             </button>
           </div>
+        </div>
+
+        <!-- Paste markdown / text -->
+        <div class="text-left space-y-2">
+          <label for="paste-input" class="block text-xs font-bold uppercase tracking-wide text-stone-800">Or paste markdown / text</label>
+          <textarea id="paste-input" rows="5" placeholder="Paste your .md or plain text here (or just press Ctrl/Cmd+V anywhere on this screen)..." class="w-full bg-white border border-[#D1CDC7] rounded p-3 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 font-mono"></textarea>
+          <button id="btn-read-pasted" class="px-5 py-2.5 bg-[#1A1A1A] hover:bg-stone-800 text-[#FDFBF7] rounded transition font-semibold text-xs tracking-wide uppercase">Read pasted text</button>
         </div>
 
         <!-- Extra Info Notes -->
@@ -211,18 +241,18 @@
       <section id="workspace-reader" class="hidden w-full space-y-6 fade-in">
         
         <!-- Controls bar: Play/Pause/Stop | speed slider | voice select | page nav (PDFs only) -->
-        <div class="bg-[#F0EDE8] text-stone-900 rounded border border-[#D1CDC7] p-4 md:p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+        <div class="sticky top-2 z-20 bg-[#F0EDE8] text-stone-900 rounded border border-[#D1CDC7] p-4 md:p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
           
           <!-- Play/Pause/Stop Media Buttons -->
           <div class="flex items-center space-x-3 order-1 md:order-none">
             <button id="btn-stop" class="p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center" title="Stop Playback">
               <i data-lucide="square" class="w-4 h-4 fill-current"></i>
             </button>
-            <button id="btn-play" class="p-3 bg-stone-950 hover:bg-stone-850 text-white rounded transition shadow-sm active:scale-95 flex items-center justify-center w-11 h-11" title="Start Playback">
-              <i id="play-icon" data-lucide="play" class="w-5 h-5 fill-current"></i>
+            <button id="btn-play" class="p-3 bg-stone-950 hover:bg-stone-800 text-white rounded transition shadow-sm active:scale-95 flex items-center justify-center w-11 h-11" title="Play / Pause">
+              <i data-lucide="play" class="w-5 h-5 fill-current"></i>
             </button>
-            <button id="btn-pause" class="p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center" title="Pause Playback">
-              <i data-lucide="pause" class="w-4 h-4 fill-current"></i>
+            <button id="btn-next-sentence" class="p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center" title="Skip to next sentence">
+              <i data-lucide="skip-forward" class="w-4 h-4 fill-current"></i>
             </button>
           </div>
 
@@ -243,6 +273,7 @@
               <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-stone-500">
                 <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
               </div>
+              <div id="voice-status" class="absolute left-0 top-full mt-1 text-[10px] text-stone-500 whitespace-nowrap"></div>
             </div>
           </div>
 
@@ -321,7 +352,19 @@
         isPaused: false,
         currentWordIndex: 0,
         currentUtterance: null,
-        isTransitioningRate: false
+        speechToken: 0,
+        hlEnd: 0,
+        blockEnd: [],
+        rafId: 0,
+        naturalSrc: null,
+        prefetch: null,
+        fallbackTimer: null,
+        mode: '',           // 'pdf' | 'md' | 'image'
+        pdfDoc: null,
+        mdNode: null,
+        wordEls: [],
+        activeEls: [],
+        imageUrl: null
       };
 
       // Voice lists
@@ -361,58 +404,81 @@
       const elBtnPrevPage = document.getElementById('btn-prev-page');
       const elBtnNextPage = document.getElementById('btn-next-page');
       const elBtnPlay = document.getElementById('btn-play');
-      const elBtnPause = document.getElementById('btn-pause');
+      const elBtnNext = document.getElementById('btn-next-sentence');
       const elBtnStop = document.getElementById('btn-stop');
       const elBtnResetHeader = document.getElementById('btn-reset-header');
       
-      const elPlayIcon = document.getElementById('play-icon');
 
       // Initialize speech voice options
+      const NATURAL_VOICES = [
+        ['af_heart', 'Heart (US, female)'], ['af_bella', 'Bella (US, female)'], ['af_nicole', 'Nicole (US, female)'],
+        ['am_michael', 'Michael (US, male)'], ['am_fenrir', 'Fenrir (US, male)'],
+        ['bf_emma', 'Emma (UK, female)'], ['bm_george', 'George (UK, male)']
+      ];
+
       function populateSpeechVoices() {
-        if (!window.speechSynthesis) return;
-        
-        voices = window.speechSynthesis.getVoices();
+        const previous = elVoiceSelect.value;
+        voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
         elVoiceSelect.innerHTML = '';
-        
-        // Filter out English spoken accents
-        const englishVoices = voices.filter(voice => 
-          voice.lang.toLowerCase().startsWith('en-') || 
-          voice.lang.toLowerCase() === 'en'
-        );
-        
-        const voicesToRender = englishVoices.length > 0 ? englishVoices : voices;
-        
-        if (voicesToRender.length === 0) {
+
+        const natural = document.createElement('optgroup');
+        natural.label = 'Natural AI voices (offline, big first download)';
+        NATURAL_VOICES.forEach(([id, label]) => {
           const opt = document.createElement('option');
-          opt.value = "";
-          opt.textContent = "Default Browser Narrator";
-          elVoiceSelect.appendChild(opt);
-          return;
+          opt.value = 'k:' + id;
+          opt.textContent = 'Natural - ' + label;
+          natural.appendChild(opt);
+        });
+        elVoiceSelect.appendChild(natural);
+
+        const english = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
+        const list = english.length > 0 ? english : voices;
+        const system = document.createElement('optgroup');
+        system.label = 'System voices';
+        if (list.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Default Browser Narrator';
+          system.appendChild(opt);
         }
-        
-        voicesToRender.forEach(voice => {
+        list.forEach(voice => {
           const opt = document.createElement('option');
           opt.value = voice.name;
           opt.textContent = `${voice.name} (${voice.lang})`;
-          
-          // Set selection preference for standard high quality Google/Microsoft accents
-          if (
-            voice.name.includes('Google US English') ||
-            voice.name.includes('Microsoft Zira') ||
-            voice.name.includes('Microsoft David') ||
-            voice.default
-          ) {
-            opt.selected = true;
-          }
-          elVoiceSelect.appendChild(opt);
+          system.appendChild(opt);
         });
+        elVoiceSelect.appendChild(system);
+
+        if (previous && [...elVoiceSelect.options].some(o => o.value === previous)) elVoiceSelect.value = previous;
+        else elVoiceSelect.value = 'k:af_heart';
       }
 
       // Hook up Voice Synthesis events
-      if (window.speechSynthesis) {
-        populateSpeechVoices();
-        window.speechSynthesis.onvoiceschanged = populateSpeechVoices;
+      populateSpeechVoices();
+      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = populateSpeechVoices;
+
+      // Pasted text (markdown) support
+      function handlePastedText(text) {
+        if (!text || !text.trim()) return;
+        handleFile(new File([text], 'Pasted text.md', { type: 'text/markdown' }));
       }
+
+      document.getElementById('btn-read-pasted').addEventListener('click', () => {
+        const input = document.getElementById('paste-input');
+        if (!input.value.trim()) { showError("Paste some text into the box first."); return; }
+        handlePastedText(input.value);
+        input.value = '';
+      });
+
+      // Ctrl/Cmd+V anywhere on the landing screen (outside the textarea) loads clipboard content
+      document.addEventListener('paste', (e) => {
+        if (elUploadSection.classList.contains('hidden')) return;
+        if (e.target && e.target.id === 'paste-input') return;
+        const files = e.clipboardData && e.clipboardData.files;
+        if (files && files.length > 0) { e.preventDefault(); handleFile(files[0]); return; }
+        const text = e.clipboardData && e.clipboardData.getData('text/plain');
+        if (text && text.trim()) { e.preventDefault(); handlePastedText(text); }
+      });
 
       // Drag & Drop Event Handlers
       elDropZone.addEventListener('dragover', (e) => {
@@ -443,58 +509,69 @@
         }
       });
 
+      // Identify supported document kinds
+      function detectKind(file) {
+        const name = (file.name || '').toLowerCase();
+        const type = file.type || '';
+        if (type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+        if (/\.(md|markdown|mdown|mkd|txt)$/.test(name) || type === 'text/markdown' || type === 'text/plain') return 'md';
+        if (type.startsWith('image/')) return 'image';
+        return null;
+      }
+
       // Dispatch file processing based on extension / metadata type
       function handleFile(file) {
         elErrorContainer.classList.add('hidden');
+        const kind = detectKind(file);
+
+        if (!kind) {
+          showError("Unsupported file type. Please upload a PDF, a Markdown (.md) file, or an image (JPEG, PNG, WEBP).");
+          return;
+        }
+
+        stopSpeech();
+        resetDocumentState();
         state.file = file;
         state.fileName = file.name;
         state.fileType = file.type;
-        
-        const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
-        const isImage = file.type.startsWith('image/');
-        
-        if (!isPdf && !isImage) {
-          showError("Unsupported file type selected. Please upload a PDF file or any classic image formats (JPEG, PNG, WEBP).");
-          return;
-        }
+        state.mode = kind;
 
         // Transitions step
         elUploadSection.classList.add('hidden');
         elProcessingSection.classList.remove('hidden');
         elProcFileName.textContent = file.name;
-        
-        // Show file loading status percentage
-        updateProgress(0, "Reading document structure...");
-        
-        // Render immediate file format thumbnail
-        renderProcessingDocThumbnail(file);
 
-        if (isPdf) {
+        updateProgress(0, "Reading document structure...");
+        renderProcessingDocThumbnail(file, kind);
+
+        if (kind === 'pdf') {
           processPDFDocument(file);
+        } else if (kind === 'md') {
+          processMarkdownDocument(file);
         } else {
           processImageOCR(file);
         }
       }
 
       // Show temporary thumbnail view as a progress loader feedback
-      async function renderProcessingDocThumbnail(file) {
+      async function renderProcessingDocThumbnail(file, kind) {
         elProcThumbnail.innerHTML = '';
         elProcThumbnail.classList.remove('hidden');
-        
-        if (file.type === 'application/pdf') {
+
+        if (kind === 'pdf') {
           try {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             const page = await pdf.getPage(1);
-            
+
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             const viewport = page.getViewport({ scale: 0.25 });
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-            
+
             await page.render({ canvasContext: context, viewport }).promise;
-            
+
             const img = document.createElement('img');
             img.src = canvas.toDataURL();
             img.className = 'w-16 h-20 object-cover rounded shadow border border-stone-200';
@@ -502,6 +579,8 @@
           } catch (e) {
             renderFallbackThumbIcon("file-text", "red");
           }
+        } else if (kind === 'md') {
+          renderFallbackThumbIcon("file-text", "stone");
         } else {
           try {
             const img = document.createElement('img');
@@ -832,44 +911,26 @@
             const pageWordsPositions = [];
             const viewport = page.getViewport({ scale: 1.5 });
             
-            if (totalWords >= 15) {
-              // Extract positions of each word
+            if (totalWords >= 3) {
+              // Extract positions of each word (width split proportionally by character count)
               for (const item of textContent.items) {
                 const str = item.str || "";
-                const words = str.trim().split(/\s+/).filter(w => w.length > 0);
-                if (words.length === 0) continue;
-                
-                try {
-                  const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-                  const canvasX = tx[4];
-                  const canvasY = tx[5];
-                  const canvasHeight = item.height ? item.height * viewport.scale : Math.abs(item.transform[3] * viewport.scale);
-                  const canvasWidth = item.width * viewport.scale;
-                  
-                  const count = words.length;
-                  const wordWidth = canvasWidth / count;
-                  
-                  for (let j = 0; j < count; j++) {
-                    pageWordsPositions.push({
-                      word: words[j],
-                      pageIndex: pageNum,
-                      x: canvasX + j * wordWidth,
-                      y: canvasY - canvasHeight, // top Y of word bounding box
-                      w: wordWidth,
-                      h: canvasHeight
-                    });
-                  }
-                } catch (err) {
-                  for (let j = 0; j < words.length; j++) {
-                    pageWordsPositions.push({
-                      word: words[j],
-                      pageIndex: pageNum,
-                      missing: true
-                    });
-                  }
+                if (!str.trim()) continue;
+                const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                const h = Math.abs(item.height ? item.height * viewport.scale : tx[3]) || 10;
+                const totalW = item.width * viewport.scale;
+                for (const m of str.matchAll(/\S+/g)) {
+                  pageWordsPositions.push({
+                    word: m[0],
+                    pageIndex: pageNum,
+                    x: tx[4] + totalW * (m.index / str.length),
+                    y: tx[5] - h,
+                    w: totalW * (m[0].length / str.length),
+                    h: h
+                  });
                 }
               }
-              
+
               pageText = pageWordsPositions.map(w => w.word).join(' ');
               pageText = normalizeText(pageText);
             } else {
@@ -971,6 +1032,85 @@
         }
       }
 
+      // Wrap every word inside the rendered markdown in a clickable span (skips code blocks)
+      function wrapMarkdownWords(root) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        while (walker.nextNode()) {
+          const n = walker.currentNode;
+          if (n.parentElement && n.parentElement.closest('pre')) continue;
+          if (!n.nodeValue.trim()) continue;
+          textNodes.push(n);
+        }
+        const words = [];
+        const els = [];
+        for (const node of textNodes) {
+          const frag = document.createDocumentFragment();
+          for (const part of node.nodeValue.split(/(\s+)/)) {
+            if (!part) continue;
+            if (/^\s+$/.test(part)) {
+              frag.appendChild(document.createTextNode(part));
+            } else {
+              const span = document.createElement('span');
+              span.className = 'md-word';
+              span.dataset.i = String(words.length);
+              span.textContent = part;
+              words.push(part);
+              els.push(span);
+              frag.appendChild(span);
+            }
+          }
+          node.parentNode.replaceChild(frag, node);
+        }
+        return { words, els };
+      }
+
+      // Core parser for Markdown / plain text documents
+      async function processMarkdownDocument(file) {
+        try {
+          updateProgress(20, "Reading file...");
+          const source = await file.text();
+          updateProgress(50, "Rendering markdown...");
+
+          const isPlain = file.name.toLowerCase().endsWith('.txt');
+          const rawHtml = isPlain
+            ? '<p>' + source.replace(/&/g, '&amp;').replace(/</g, '&lt;').split(/\n\s*\n/).join('</p><p>') + '</p>'
+            : marked.parse(source, { gfm: true });
+          const clean = DOMPurify.sanitize(rawHtml);
+
+          const root = document.createElement('div');
+          root.className = 'md-body';
+          root.innerHTML = clean;
+          root.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
+
+          const { words, els } = wrapMarkdownWords(root);
+          if (words.length === 0) throw new Error("No readable text found in this file.");
+
+          root.addEventListener('click', (e) => {
+            const span = e.target.closest('.md-word');
+            if (!span) return;
+            if (span.closest('a')) e.preventDefault();
+            speakWordsFromOffset(parseInt(span.dataset.i, 10));
+          });
+
+          const blockOf = (el) => el.closest('p,li,h1,h2,h3,h4,h5,h6,blockquote,td,th') || root;
+          state.blockEnd = els.map((el, i) => i === els.length - 1 || blockOf(el) !== blockOf(els[i + 1]));
+          state.mdNode = root;
+          state.wordEls = els;
+          updateProgress(100, "Markdown ready!");
+
+          setTimeout(() => {
+            initializeReaderWorkspace(
+              file.name,
+              [words.join(' ')],
+              [words.map(w => ({ word: w, pageIndex: 1, missing: true }))]
+            );
+          }, 250);
+        } catch (e) {
+          console.error("Markdown parsing error: ", e);
+          showError(`Failed to process this file: ${e.message || e}`);
+        }
+      }
       // Setup states and open Workspace Screen UI
       async function initializeReaderWorkspace(fileName, pages, pagesWordPositions) {
         state.pagesText = pages;
@@ -1040,122 +1180,121 @@
         }
         return 1;
       }
-      // Render actual visual viewport (Canvas or Image direct render) with highlights overlay
+      // Cached PDF document so pages don't re-parse the file on every render
+      async function getPdfDoc() {
+        if (!state.pdfDoc) {
+          const buf = await state.file.arrayBuffer();
+          state.pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+        }
+        return state.pdfDoc;
+      }
+
+      let renderToken = 0;
+
+      // Render actual visual viewport (PDF canvas, image, or markdown) with highlights overlay
       async function renderVisualPage() {
-        if (!elVisualViewerContainer) return;
-        elVisualViewerContainer.innerHTML = '';
-        
-        if (!state.file) return;
-        
-        const isPdf = state.fileType === 'application/pdf' || state.fileName.endsWith('.pdf');
-        
-        if (isPdf) {
+        if (!elVisualViewerContainer || !state.file) return;
+        const token = ++renderToken;
+        const container = elVisualViewerContainer;
+        container.innerHTML = '';
+
+        if (state.mode === 'md') {
+          container.className = 'w-full max-h-[70vh] overflow-auto custom-scrollbar';
+          container.appendChild(state.mdNode);
+          if (elDebugStats) elDebugStats.textContent = `MARKDOWN | ${state.allWords.length} WORDS`;
+          updateHighlightsAndBar(state.currentWordIndex);
+          return;
+        }
+
+        container.className = 'w-full h-full flex items-center justify-center overflow-auto custom-scrollbar';
+
+        if (state.mode === 'pdf') {
           try {
-            elVisualViewerContainer.innerHTML = `
+            container.innerHTML = `
               <div class="flex flex-col items-center justify-center space-y-2 py-10 text-stone-500">
                 <div class="w-8 h-8 border-4 border-stone-300 border-t-stone-900 rounded-full animate-spin"></div>
-                <span class="text-xs font-sans tracking-wide uppercase font-bold text-stone-400">Rendering high-res page view...</span>
+                <span class="text-xs font-sans tracking-wide uppercase font-bold text-stone-400">Rendering page view...</span>
               </div>
             `;
-            
-            const arrayBuffer = await state.file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            const pdf = await getPdfDoc();
             const page = await pdf.getPage(state.currentPage);
-            
-            elVisualViewerContainer.innerHTML = ''; // slice loader
-            
-            // Create a position: relative container to hold both canvases
+            if (token !== renderToken) return;
+
+            const viewport = page.getViewport({ scale: 1.5 });
+
             const wrapper = document.createElement('div');
-            wrapper.className = 'relative inline-block';
-            
+            wrapper.className = 'relative w-full max-w-[900px] mx-auto';
+
             const pdfCanvas = document.createElement('canvas');
             pdfCanvas.id = 'pdf-render-canvas';
-            pdfCanvas.className = 'max-w-full h-auto border border-[#D1CDC7] shadow-sm bg-white rounded-sm block';
-            
+            pdfCanvas.className = 'w-full h-auto border border-[#D1CDC7] shadow-sm bg-white rounded-sm block';
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+
             const highlightCanvas = document.createElement('canvas');
             highlightCanvas.id = 'highlightCanvas';
-            highlightCanvas.className = 'absolute top-0 left-0 pointer-events-none block';
-            
+            highlightCanvas.className = 'absolute top-0 left-0 w-full h-full pointer-events-none block';
+            highlightCanvas.width = viewport.width;
+            highlightCanvas.height = viewport.height;
+
             wrapper.appendChild(pdfCanvas);
             wrapper.appendChild(highlightCanvas);
-            elVisualViewerContainer.appendChild(wrapper);
-            
-            const context = pdfCanvas.getContext('2d');
-            const viewport = page.getViewport({ scale: 1.5 }); // PDF page scale 1.5 for crisp visual output
-            pdfCanvas.height = viewport.height;
-            pdfCanvas.width = viewport.width;
-            pdfCanvas.style.width = '100%';
-            pdfCanvas.style.height = 'auto'; // allow responsive scaling
-            
-            await page.render({ canvasContext: context, viewport }).promise;
-            
-            // Sync highlightCanvas configuration
-            highlightCanvas.width = pdfCanvas.width;
-            highlightCanvas.height = pdfCanvas.height;
-            highlightCanvas.style.width = pdfCanvas.style.width;
-            highlightCanvas.style.height = pdfCanvas.style.height;
 
-            // Clicking target on wrapper to play from clicked word
+            await page.render({ canvasContext: pdfCanvas.getContext('2d'), viewport }).promise;
+            if (token !== renderToken) return;
+
+            container.innerHTML = '';
+            container.appendChild(wrapper);
+
+            const toCanvasXY = (e) => {
+              const rect = pdfCanvas.getBoundingClientRect();
+              return [
+                ((e.clientX - rect.left) / rect.width) * pdfCanvas.width,
+                ((e.clientY - rect.top) / rect.height) * pdfCanvas.height
+              ];
+            };
+
             wrapper.addEventListener('click', (e) => {
-              const rect = pdfCanvas.getBoundingClientRect();
-              const clickX = ((e.clientX - rect.left) / rect.width) * pdfCanvas.width;
-              const clickY = ((e.clientY - rect.top) / rect.height) * pdfCanvas.height;
-              
-              const clickedWord = findWordAtCoordinate(state.currentPage, clickX, clickY);
-              if (clickedWord) {
-                speakWordsFromOffset(clickedWord.wordIndex);
-              }
+              const [x, y] = toCanvasXY(e);
+              const hit = findWordAtCoordinate(state.currentPage, x, y);
+              if (hit) speakWordsFromOffset(hit.wordIndex);
             });
 
-            // Hover cursor adjustment
             wrapper.addEventListener('mousemove', (e) => {
-              const rect = pdfCanvas.getBoundingClientRect();
-              const hoverX = ((e.clientX - rect.left) / rect.width) * pdfCanvas.width;
-              const hoverY = ((e.clientY - rect.top) / rect.height) * pdfCanvas.height;
-              
-              const word = findWordAtCoordinate(state.currentPage, hoverX, hoverY);
-              if (word) {
-                pdfCanvas.style.cursor = 'pointer';
-                highlightCanvas.style.cursor = 'pointer';
-              } else {
-                pdfCanvas.style.cursor = 'default';
-                highlightCanvas.style.cursor = 'default';
-              }
+              const [x, y] = toCanvasXY(e);
+              wrapper.style.cursor = findWordAtCoordinate(state.currentPage, x, y) ? 'pointer' : 'default';
             });
 
-            // Update current page highlights
             updateHighlightsAndBar(state.currentWordIndex);
-            
+
             if (elDebugStats) {
               const range = state.pageWordIndices[state.currentPage - 1];
-              const wordsCount = range ? range.count : 0;
-              elDebugStats.textContent = `PDF PAGE ${state.currentPage} | ${wordsCount} WORDS EXTRACTED`;
+              elDebugStats.textContent = `PDF PAGE ${state.currentPage} | ${range ? range.count : 0} WORDS EXTRACTED`;
             }
           } catch (e) {
             console.error("Render Page canvas Error: ", e);
-            elVisualViewerContainer.innerHTML = `<p class="text-red-600 font-serif text-center p-4">Error loading page visual render path: ${e.message}</p>`;
+            if (token === renderToken) {
+              container.innerHTML = `<p class="text-red-600 font-serif text-center p-4">Error loading page: ${e.message}</p>`;
+            }
           }
         } else {
-          // Image displays
           try {
+            if (!state.imageUrl) state.imageUrl = URL.createObjectURL(state.file);
             const img = document.createElement('img');
-            img.src = URL.createObjectURL(state.file);
+            img.src = state.imageUrl;
             img.className = 'max-w-full max-h-[65vh] object-contain border border-[#D1CDC7] shadow-sm bg-white rounded-sm';
-            
             img.onload = () => {
-              // Update fallback now reading bar context since images have no positions
               updateHighlightsAndBar(state.currentWordIndex);
               if (elDebugStats) {
                 const range = state.pageWordIndices[0];
-                const wordsCount = range ? range.count : 0;
-                elDebugStats.textContent = `IMAGE SOURCE | ${wordsCount} WORDS EXTRACTED`;
+                elDebugStats.textContent = `IMAGE SOURCE | ${range ? range.count : 0} WORDS EXTRACTED`;
               }
             };
-            
-            elVisualViewerContainer.appendChild(img);
+            container.appendChild(img);
           } catch (e) {
             console.error("Image load visual error: ", e);
-            elVisualViewerContainer.innerHTML = `<p class="text-red-600 font-serif text-center p-4">Error displaying image visual layout: ${e.message}</p>`;
+            container.innerHTML = `<p class="text-red-600 font-serif text-center p-4">Error displaying image: ${e.message}</p>`;
           }
         }
       }
@@ -1196,6 +1335,7 @@
           if (state.isPlaying && !state.isPaused) {
             speakWordsFromOffset(range.start);
           } else {
+            if (state.isPlaying) stopSpeech(); // paused: drop the old utterance
             state.currentWordIndex = range.start;
             updateHighlightsAndBar(state.currentWordIndex);
           }
@@ -1220,7 +1360,7 @@
         }
         
         const start = Math.max(0, wordIdx - 3);
-        const end = Math.min(state.allWords.length, wordIdx + 9); // current + 8 words after
+        const end = Math.min(state.allWords.length, Math.max(wordIdx + 9, state.hlEnd + 3));
         
         elNowReadingText.innerHTML = '';
         
@@ -1237,7 +1377,7 @@
           span.className = 'font-serif text-lg tracking-wide transition-all mx-1.5 my-1 inline-block select-text py-0.5 rounded';
           span.textContent = wordVal;
           
-          if (i === wordIdx) {
+          if (i >= wordIdx && i < Math.max(state.hlEnd, wordIdx + 1)) {
             // highlighted in amber (#FAC775 bg, #412402 text)
             span.className += ' bg-[#FAC775] text-[#412402] font-semibold px-3 py-1 shadow-sm scale-110';
           } else {
@@ -1259,24 +1399,20 @@
         }
       }
 
-      // Search the clicked coordinate inside wordPositions
+      // Search the clicked coordinate inside the current page's word positions
       function findWordAtCoordinate(pageIndex, targetX, targetY) {
-        if (!state.wordPositions) return null;
-        
-        for (let i = 0; i < state.wordPositions.length; i++) {
+        const range = state.pageWordIndices[pageIndex - 1];
+        if (!range) return null;
+        const paddingX = 3;
+        const paddingY = 4;
+        for (let i = range.start; i < range.end; i++) {
           const pos = state.wordPositions[i];
-          if (pos && pos.pageIndex === pageIndex && !pos.missing) {
-            // Check bounding box intersection with a tiny vertical padding for ease of clicking on touch screens
-            const paddingX = 4;
-            const paddingY = 6;
-            if (
-              targetX >= pos.x - paddingX &&
-              targetX <= pos.x + pos.w + paddingX &&
-              targetY >= pos.y - paddingY &&
-              targetY <= pos.y + pos.h + paddingY
-            ) {
-              return { ...pos, wordIndex: i };
-            }
+          if (!pos || pos.missing) continue;
+          if (
+            targetX >= pos.x - paddingX && targetX <= pos.x + pos.w + paddingX &&
+            targetY >= pos.y - paddingY && targetY <= pos.y + pos.h + paddingY
+          ) {
+            return { ...pos, wordIndex: i };
           }
         }
         return null;
@@ -1284,246 +1420,438 @@
 
       // Safe rounded rectangle drawer
       function drawRoundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
           ctx.roundRect(x, y, width, height, radius);
         } else {
-          ctx.beginPath();
-          ctx.moveTo(x + radius, y);
-          ctx.lineTo(x + width - radius, y);
-          ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-          ctx.lineTo(x + width, y + height - radius);
-          ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-          ctx.lineTo(x + radius, y + height);
-          ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-          ctx.lineTo(x, y + radius);
-          ctx.quadraticCurveTo(x, y, x + radius, y);
+          ctx.rect(x, y, width, height);
         }
       }
 
-      // Draw word highlight on canvas overlay
+      function clearCanvasHighlight() {
+        const hlCanvas = document.getElementById('highlightCanvas');
+        if (hlCanvas) hlCanvas.getContext('2d').clearRect(0, 0, hlCanvas.width, hlCanvas.height);
+      }
+
+      // Draw sentence highlight on the canvas overlay (one box per visual line)
       function drawCanvasHighlight(wordIdx) {
         const hlCanvas = document.getElementById('highlightCanvas');
         if (!hlCanvas) return;
-        
         const ctx = hlCanvas.getContext('2d');
         ctx.clearRect(0, 0, hlCanvas.width, hlCanvas.height);
-        
-        if (!state.wordPositions || state.wordPositions.length === 0) return;
-        
-        const pos = state.wordPositions[wordIdx];
-        if (!pos) return;
-        
-        // Render highlight only if word is on the active page, has coords, and speech is active or paused
-        if (pos.pageIndex === state.currentPage && !pos.missing && (state.isPlaying || state.isPaused)) {
-          const x = pos.x;
-          const y = pos.y;
-          const w = pos.w;
-          const h = pos.h;
-          
-          ctx.beginPath();
-          drawRoundRect(ctx, x - 1.5, y - 1, w + 3, h + 2, 3);
-          
-          ctx.fillStyle = 'rgba(250, 199, 117, 0.45)'; // Amber gold, semi-transparent
+        if (!(state.isPlaying || state.isPaused)) return;
+
+        const range = state.pageWordIndices[state.currentPage - 1];
+        if (!range) return;
+        const from = Math.max(wordIdx, range.start);
+        const to = Math.min(Math.max(state.hlEnd, wordIdx + 1), range.end);
+
+        // group consecutive positioned words into lines
+        const lines = [];
+        for (let i = from; i < to; i++) {
+          const p = state.wordPositions[i];
+          if (!p || p.missing) continue;
+          const cur = lines[lines.length - 1];
+          if (cur && Math.abs(p.y - cur.y) < p.h * 0.6 && p.x >= cur.maxX - 2) {
+            cur.maxX = Math.max(cur.maxX, p.x + p.w);
+            cur.h = Math.max(cur.h, p.h);
+          } else {
+            lines.push({ minX: p.x, maxX: p.x + p.w, y: p.y, h: p.h });
+          }
+        }
+        if (lines.length === 0) return;
+
+        ctx.fillStyle = 'rgba(250, 199, 117, 0.45)';
+        ctx.strokeStyle = 'rgba(186, 117, 23, 0.6)';
+        ctx.lineWidth = 1;
+        for (const l of lines) {
+          drawRoundRect(ctx, l.minX - 2, l.y - 2, l.maxX - l.minX + 4, l.h + 5, 3);
           ctx.fill();
-          
-          ctx.lineWidth = 1.5;
-          ctx.strokeStyle = 'rgba(186, 117, 23, 0.7)'; // Outline highlight
           ctx.stroke();
+        }
+
+        // Keep the first highlighted line in view
+        const rect = hlCanvas.getBoundingClientRect();
+        const yPx = rect.top + (lines[0].y + lines[0].h / 2) * (rect.height / hlCanvas.height);
+        if (yPx < 150 || yPx > window.innerHeight - 80) {
+          window.scrollBy({ top: yPx - window.innerHeight / 2, behavior: 'smooth' });
+        }
+      }
+
+      function clearMarkdownHighlight() {
+        if (state.activeEls) state.activeEls.forEach(el => el.classList.remove('md-active', 'md-line'));
+        state.activeEls = [];
+      }
+
+      // Highlight the sentence being read inside rendered markdown
+      function highlightMarkdownWord(wordIdx) {
+        clearMarkdownHighlight();
+        if (!(state.isPlaying || state.isPaused)) return;
+        const to = Math.min(Math.max(state.hlEnd, wordIdx + 1), state.wordEls.length);
+        for (let i = wordIdx; i < to; i++) {
+          state.wordEls[i].classList.add('md-active');
+          state.activeEls.push(state.wordEls[i]);
+        }
+        const el = state.wordEls[wordIdx];
+        if (!el) return;
+        const c = elVisualViewerContainer;
+        const r = el.getBoundingClientRect();
+        const cr = c.getBoundingClientRect();
+        if (r.top < cr.top + 40 || r.bottom > cr.bottom - 80) {
+          c.scrollTo({ top: c.scrollTop + (r.top - cr.top) - cr.height / 3, behavior: 'smooth' });
+        }
+        if (r.top < 120 || r.bottom > window.innerHeight - 40) {
+          window.scrollBy({ top: r.top - window.innerHeight / 3, behavior: 'smooth' });
         }
       }
 
       // Check if positions exist for the current word
       function hasPositionsForCurrentWord(wordIdx) {
-        if (!state.wordPositions || state.wordPositions.length === 0) return false;
-        const pos = state.wordPositions[wordIdx];
-        return pos && !pos.missing;
+        const pos = state.wordPositions && state.wordPositions[wordIdx];
+        return !!pos && !pos.missing;
       }
 
       // Master visibility toggle and highlight orchestrator
       function updateHighlightsAndBar(wordIdx) {
-        const hasPositionsVal = hasPositionsForCurrentWord(wordIdx);
-        
-        if (hasPositionsVal) {
+        if (state.mode === 'md') {
+          if (elNowReadingBar) elNowReadingBar.classList.add('hidden');
+          highlightMarkdownWord(wordIdx);
+          return;
+        }
+        if (hasPositionsForCurrentWord(wordIdx)) {
           // Digital PDF text: overlay canvas highlight, hide context bar
           if (elNowReadingBar) elNowReadingBar.classList.add('hidden');
           drawCanvasHighlight(wordIdx);
         } else {
-          // Scanned page or Image: fall back to context bar
+          // Scanned page or image: fall back to context bar
           if (elNowReadingBar) elNowReadingBar.classList.remove('hidden');
-          
-          // Clear any canvas highlight
-          const hlCanvas = document.getElementById('highlightCanvas');
-          if (hlCanvas) {
-            const ctx = hlCanvas.getContext('2d');
-            ctx.clearRect(0, 0, hlCanvas.width, hlCanvas.height);
-          }
+          clearCanvasHighlight();
         }
-        
-        // Sync context text content inside the bar
         updateNowReadingBar(wordIdx);
+      }
+
+      // ---- Speech engine: chunked so long documents don't stall, with boundary + timer fallback ----
+      const CHUNK_WORDS = 40;
+
+      function clearFallbackTimer() {
+        clearTimeout(state.fallbackTimer);
+        state.fallbackTimer = null;
+      }
+
+      // Move the "current word" pointer, flipping PDF pages if needed
+      function setCurrentWord(idx) {
+        state.currentWordIndex = idx;
+        const pageIdx = getPageForWordIndex(idx);
+        if (pageIdx !== state.currentPage) {
+          state.currentPage = pageIdx;
+          renderVisualPage();
+          updateNavigationStats();
+        } else {
+          updateHighlightsAndBar(idx);
+        }
       }
 
       // Play speech synthesiser words list from selected index
       function speakWordsFromOffset(wordIdx) {
-        if (!window.speechSynthesis) return;
-
-        // Reset state for Rate transition if already speaking
-        if (window.speechSynthesis.speaking) {
-          state.isTransitioningRate = true; 
-          window.speechSynthesis.cancel();
+        if (state.allWords.length === 0) return;
+        if (!window.speechSynthesis && !isNaturalVoice()) {
+          alert("Text-to-speech is not supported in this browser.");
+          return;
         }
+
+        const token = ++state.speechToken;
+        clearFallbackTimer();
+        stopNatural();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
 
         state.isPlaying = true;
         state.isPaused = false;
-        state.currentWordIndex = wordIdx;
         updatePlaybackUI();
+        setCurrentWord(wordIdx);
 
-        if (state.allWords.length === 0) return;
+        // Small delay after cancel() avoids Chrome dropping the next utterance
+        setTimeout(() => {
+          if (token === state.speechToken) speakChunk(wordIdx, token);
+        }, 60);
+      }
 
-        // Truncate starting from the target index
-        const subWords = state.allWords.slice(wordIdx);
-        const textToNarrate = subWords.join(' ');
-        
-        const utterance = new SpeechSynthesisUtterance(textToNarrate);
+      // Choose where a chunk ends, preferring a sentence boundary
+      const ABBREV = /^(e\.g|i\.e|etc|vs|dr|mr|mrs|ms|fig|no|approx|cf)\.$/i;
 
-        // Configure speed
+      // A chunk is one sentence (never crossing a PDF page or markdown block), so the highlight
+      // starts exactly when that sentence's audio starts.
+      function chooseEnd(start, maxWords) {
+        const words = state.allWords;
+        const page = state.pageWordIndices[getPageForWordIndex(start) - 1];
+        const limit = Math.min(start + maxWords, words.length, page ? page.end : words.length);
+        for (let k = start + 1; k <= limit; k++) {
+          const w = words[k - 1];
+          if (state.blockEnd[k - 1]) return k;
+          if (/[.!?]["')\]]*$/.test(w) && !ABBREV.test(w) && k - start >= 3) return k;
+        }
+        if (limit < words.length && limit === start + maxWords) {
+          // very long sentence: split at a clause boundary if possible
+          for (let k = limit; k > start + maxWords / 2; k--) {
+            if (/[,;:]["')\]]*$/.test(words[k - 1])) return k;
+          }
+        }
+        return limit;
+      }
+
+      // Highlight words [start, end) and flip the PDF page if needed
+      function setCurrentRange(start, end) {
+        state.hlEnd = end;
+        setCurrentWord(start);
+      }
+
+      function speakChunk(start, token) {
+        const words = state.allWords;
+        if (start >= words.length) { stopSpeech(); return; }
+        if (isNaturalVoice()) { speakChunkNatural(start, token, true); return; }
+
+        const end = chooseEnd(start, 45);
+        const utterance = new SpeechSynthesisUtterance(words.slice(start, end).join(' '));
         utterance.rate = parseFloat(elRateRange.value) || 1.0;
+        const voice = voices.find(v => v.name === elVoiceSelect.value);
+        if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
 
-        // Configure selected voice
-        const selectedVoiceName = elVoiceSelect.value;
-        if (selectedVoiceName) {
-          const matchedVoice = voices.find(v => v.name === selectedVoiceName);
-          if (matchedVoice) {
-            utterance.voice = matchedVoice;
-          }
-        }
-
-        // Map character positions back to list index
-        const wordOffsets = [];
-        let currentOffset = 0;
-        for (let i = 0; i < subWords.length; i++) {
-          const w = subWords[i];
-          wordOffsets.push({
-            absoluteIdx: wordIdx + i,
-            startChar: currentOffset,
-            endChar: currentOffset + w.length
-          });
-          currentOffset += w.length + 1; // plus single space separator
-        }
-
-        // Boundary tracker event
-        utterance.onboundary = function(event) {
-          if (event.name === 'word') {
-            const boundaryCharIdx = event.charIndex;
-            
-            const match = wordOffsets.find(offset => 
-              boundaryCharIdx >= offset.startChar && boundaryCharIdx <= offset.endChar
-            );
-            
-            if (match) {
-              state.currentWordIndex = match.absoluteIdx;
-              
-              // Automatically turn corresponding PDF view representation
-              const pageIdx = getPageForWordIndex(state.currentWordIndex);
-              if (pageIdx !== state.currentPage) {
-                state.currentPage = pageIdx;
-                renderVisualPage();
-                updateNavigationStats();
-              } else {
-                updateHighlightsAndBar(state.currentWordIndex);
-              }
-            }
-          }
+        utterance.onend = () => {
+          if (token !== state.speechToken) return;
+          if (end >= words.length) stopSpeech();
+          else speakChunk(end, token);
         };
-
-        utterance.onend = function() {
-          if (state.isTransitioningRate) {
-            state.isTransitioningRate = false;
-            return;
-          }
-          stopSpeech();
-        };
-
-        utterance.onerror = function(err) {
+        utterance.onerror = (err) => {
+          if (token !== state.speechToken) return;
+          if (err.error === 'interrupted' || err.error === 'canceled') return;
           console.error("Speech Synthesis Utterance Error:", err);
-          if (state.isTransitioningRate) {
-            state.isTransitioningRate = false;
-            return;
-          }
           stopSpeech();
         };
 
-        state.currentUtterance = utterance;
+        setCurrentRange(start, end);
+        state.currentUtterance = utterance; // keep a reference so it isn't garbage collected mid-speech
         window.speechSynthesis.speak(utterance);
+      }
+
+      // ---- Natural AI voice (Kokoro, runs locally in the browser) ----
+      let kokoroPromise = null;
+      let audioCtx = null;
+
+      function isNaturalVoice() { return elVoiceSelect.value.startsWith('k:'); }
+      function setVoiceStatus(t) { const el = document.getElementById('voice-status'); if (el) el.textContent = t; }
+
+      // The model runs in a Web Worker so generation never freezes the page
+      const KOKORO_WORKER_SRC = `
+        import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm';
+        let ttsPromise = null;
+        const onProgress = (p) => {
+          if (p.status === 'progress' && p.total > 1e6) self.postMessage({ type: 'progress', pct: Math.round(p.loaded / p.total * 100) });
+        };
+        async function getTTS() {
+          if (!ttsPromise) {
+            ttsPromise = (async () => {
+              const repo = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+              // WebGPU is far faster (real-time+); fall back to the smaller WASM build otherwise
+              if (self.navigator && navigator.gpu) {
+                try {
+                  if (await navigator.gpu.requestAdapter()) {
+                    return await KokoroTTS.from_pretrained(repo, { dtype: 'fp32', device: 'webgpu', progress_callback: onProgress });
+                  }
+                } catch (e) { console.warn('WebGPU unavailable, using WASM', e); }
+              }
+              return await KokoroTTS.from_pretrained(repo, { dtype: 'q8', device: 'wasm', progress_callback: onProgress });
+            })();
+          }
+          return ttsPromise;
+        }
+        self.onmessage = async (e) => {
+          const { id, text, voice, speed } = e.data;
+          try {
+            const tts = await getTTS();
+            if (text === null) { self.postMessage({ type: 'ready', id }); return; }
+            const out = await tts.generate(text, { voice, speed });
+            const audio = out.audio;
+            self.postMessage({ type: 'audio', id, audio, sampling_rate: out.sampling_rate }, [audio.buffer]);
+          } catch (err) {
+            ttsPromise = null;
+            self.postMessage({ type: 'error', id, message: String(err && err.message || err) });
+          }
+        };
+      `;
+      let kokoroWorker = null;
+      let kokoroMsgId = 0;
+      const kokoroPending = new Map();
+
+      function callKokoro(payload) {
+        if (!kokoroWorker) {
+          const url = URL.createObjectURL(new Blob([KOKORO_WORKER_SRC], { type: 'text/javascript' }));
+          kokoroWorker = new Worker(url, { type: 'module' });
+          kokoroWorker.onmessage = (e) => {
+            const m = e.data;
+            if (m.type === 'progress') { setVoiceStatus(`Downloading voice model ${m.pct}%`); return; }
+            const p = kokoroPending.get(m.id);
+            if (!p) return;
+            kokoroPending.delete(m.id);
+            if (m.type === 'error') p.reject(new Error(m.message));
+            else p.resolve(m);
+          };
+          kokoroWorker.onerror = (e) => {
+            const err = new Error(e.message || 'Worker failed');
+            kokoroPending.forEach(p => p.reject(err));
+            kokoroPending.clear();
+            try { kokoroWorker.terminate(); } catch (x) {}
+            kokoroWorker = null;
+          };
+        }
+        return new Promise((resolve, reject) => {
+          const id = ++kokoroMsgId;
+          kokoroPending.set(id, { resolve, reject });
+          kokoroWorker.postMessage({ id, ...payload });
+        });
+      }
+
+      function loadKokoro() {
+        if (!kokoroPromise) {
+          setVoiceStatus('Loading natural voice...');
+          kokoroPromise = callKokoro({ text: null }).then(() => { setVoiceStatus(''); })
+            .catch(e => { kokoroPromise = null; throw e; });
+        }
+        return kokoroPromise;
+      }
+
+      function generateNatural(start, end) {
+        const text = state.allWords.slice(start, end).join(' ');
+        const voice = elVoiceSelect.value.slice(2);
+        const speed = parseFloat(elRateRange.value) || 1.0;
+        return loadKokoro().then(() => callKokoro({ text, voice, speed }));
+      }
+
+      function stopNatural() {
+        state.prefetch = null;
+        if (state.naturalSrc) {
+          try { state.naturalSrc.onended = null; state.naturalSrc.stop(); } catch (e) {}
+          state.naturalSrc = null;
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      }
+
+      async function speakChunkNatural(start, token, first) {
+        const words = state.allWords;
+        if (start >= words.length) { stopSpeech(); return; }
+        try {
+          const job = state.prefetch && state.prefetch.start === start && state.prefetch.token === token ? state.prefetch : null;
+          const end = job ? job.end : chooseEnd(start, first ? 25 : 45);
+          if (!job) setVoiceStatus(kokoroPromise ? 'Preparing speech...' : 'Loading natural voice...');
+          const audio = await (job ? job.promise : generateNatural(start, end));
+          if (token !== state.speechToken) return;
+          setVoiceStatus('');
+
+          if (end < words.length) {
+            const nEnd = chooseEnd(end, 45);
+            state.prefetch = { start: end, end: nEnd, token, promise: generateNatural(end, nEnd) };
+            state.prefetch.promise.catch(() => {});
+          } else {
+            state.prefetch = null;
+          }
+          playNatural(audio, start, end, token);
+        } catch (e) {
+          if (token !== state.speechToken) return;
+          console.error('Natural voice failed, falling back to system voice:', e);
+          setVoiceStatus('Natural voice unavailable - using system voice');
+          const sys = [...elVoiceSelect.options].find(o => !o.value.startsWith('k:'));
+          if (sys) elVoiceSelect.value = sys.value;
+          speakWordsFromOffset(start);
+        }
+      }
+
+      function playNatural(raw, start, end, token) {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended' && !state.isPaused) audioCtx.resume();
+
+        const buf = audioCtx.createBuffer(1, raw.audio.length, raw.sampling_rate);
+        buf.copyToChannel(raw.audio, 0);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(audioCtx.destination);
+        state.naturalSrc = src;
+
+        src.onended = () => {
+          if (token !== state.speechToken) return;
+          if (end >= state.allWords.length) stopSpeech();
+          else speakChunkNatural(end, token, false);
+        };
+
+        setCurrentRange(start, end); // sentence highlight begins exactly with its audio
+        src.start();
+      }
+
+      function pauseSpeech() {
+        if (isNaturalVoice() && audioCtx) audioCtx.suspend(); else window.speechSynthesis.pause();
+      }
+      function resumeSpeech() {
+        if (isNaturalVoice() && audioCtx) audioCtx.resume(); else window.speechSynthesis.resume();
       }
 
       // Sync CSS buttons styled classes on play state alternates
       function updatePlaybackUI() {
+        const setIcon = (name) => {
+          elBtnPlay.innerHTML = `<i data-lucide="${name}" class="w-5 h-5 fill-current"></i>`;
+        };
+        const base = "p-3 rounded transition active:scale-95 flex items-center justify-center w-11 h-11 ";
         if (state.isPlaying && !state.isPaused) {
-          // Speak is active
-          elPlayIcon.setAttribute('data-lucide', 'headphones');
-          elBtnPlay.className = "p-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded transition shadow-md active:scale-95 flex items-center justify-center w-11 h-11 ring-4 ring-emerald-500/20";
-          elBtnPlay.title = "Playback Currently Active";
-          
-          elBtnPause.className = "p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center";
-          elBtnPause.title = "Pause Playback";
+          setIcon('pause');
+          elBtnPlay.className = base + "bg-emerald-700 hover:bg-emerald-800 text-white shadow-md ring-4 ring-emerald-500/20";
+          elBtnPlay.title = "Pause";
         } else if (state.isPaused) {
-          // Paused: Make play/resume button color CHANGE dramatically noticeable with gold pulsing glow!
-          elPlayIcon.setAttribute('data-lucide', 'play');
-          elBtnPlay.className = "p-3 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold border border-amber-600 rounded transition shadow-lg active:scale-95 flex items-center justify-center w-11 h-11 ring-4 ring-amber-500/40 animate-pulse";
-          elBtnPlay.title = "Click to Resume Playback";
-          
-          elBtnPause.className = "p-2.5 bg-stone-300 border border-stone-400 text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center font-semibold";
-          elBtnPause.title = "Playback Paused";
+          setIcon('play');
+          elBtnPlay.className = base + "bg-amber-500 hover:bg-amber-400 text-stone-950 border border-amber-600 shadow-lg ring-4 ring-amber-500/40";
+          elBtnPlay.title = "Resume";
         } else {
-          // Off: Reset to classic neutral Editorial aesthetic
-          elPlayIcon.setAttribute('data-lucide', 'play');
-          elBtnPlay.className = "p-3 bg-stone-950 hover:bg-stone-850 text-white rounded transition shadow-sm active:scale-95 flex items-center justify-center w-11 h-11";
-          elBtnPlay.title = "Start Playback";
-          
-          elBtnPause.className = "p-2.5 bg-white hover:bg-[#FDFBF7] border border-[#D1CDC7] text-stone-700 hover:text-stone-950 rounded transition shadow-sm active:scale-95 flex items-center justify-center";
-          elBtnPause.title = "Pause Playback";
+          setIcon('play');
+          elBtnPlay.className = base + "bg-stone-950 hover:bg-stone-800 text-white shadow-sm";
+          elBtnPlay.title = "Play";
         }
         lucide.createIcons();
       }
 
       // Stop speech synthesizer block
       function stopSpeech() {
-        if (!window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        
+        state.speechToken++;
+        clearFallbackTimer();
+        stopNatural();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+
         state.isPlaying = false;
         state.isPaused = false;
-        state.currentWordIndex = 0;
+        const range = state.pageWordIndices[state.currentPage - 1];
+        state.currentWordIndex = range ? range.start : 0;
         updatePlaybackUI();
-        updateNowReadingBar(0);
 
-        // Clear canvas overlay
-        const hlCanvas = document.getElementById('highlightCanvas');
-        if (hlCanvas) {
-          const ctx = hlCanvas.getContext('2d');
-          ctx.clearRect(0, 0, hlCanvas.width, hlCanvas.height);
-        }
+        clearCanvasHighlight();
+        clearMarkdownHighlight();
+        if (state.allWords.length) updateNowReadingBar(state.currentWordIndex);
       }
 
       // Event Listeners for TTS controlsbar
       elBtnPlay.addEventListener('click', () => {
+        if (state.allWords.length === 0) return;
         if (!state.isPlaying) {
           speakWordsFromOffset(state.currentWordIndex);
         } else if (state.isPaused) {
-          window.speechSynthesis.resume();
+          resumeSpeech();
           state.isPaused = false;
-          state.isPlaying = true;
+          updatePlaybackUI();
+        } else {
+          pauseSpeech();
+          state.isPaused = true;
           updatePlaybackUI();
         }
       });
 
-      elBtnPause.addEventListener('click', () => {
-        if (state.isPlaying && !state.isPaused) {
-          window.speechSynthesis.pause();
-          state.isPaused = true;
-          updatePlaybackUI();
-        }
+      elBtnNext.addEventListener('click', () => {
+        if (state.allWords.length === 0) return;
+        const next = state.isPlaying ? state.hlEnd : chooseEnd(state.currentWordIndex, 45);
+        if (next >= state.allWords.length) { stopSpeech(); return; }
+        speakWordsFromOffset(next);
       });
 
       elBtnStop.addEventListener('click', () => {
@@ -1532,50 +1860,57 @@
 
       // Narrator speed events handling
       elRateRange.addEventListener('input', () => {
-        const speed = parseFloat(elRateRange.value).toFixed(1);
-        elRateDisplay.textContent = `${speed}×`;
+        elRateDisplay.textContent = `${parseFloat(elRateRange.value).toFixed(1)}×`;
       });
 
       elRateRange.addEventListener('change', () => {
-        // If speaking, restart from active index so that the SpeechSynthesisUtterance applies rate change immediately
-        if (state.isPlaying && !state.isPaused) {
-          speakWordsFromOffset(state.currentWordIndex);
-        }
+        // Restart from the current word so the new rate applies immediately
+        if (state.isPlaying && !state.isPaused) speakWordsFromOffset(state.currentWordIndex);
       });
 
-      // Re-trigger playback if voice changed during active speech
       elVoiceSelect.addEventListener('change', () => {
-        if (state.isPlaying && !state.isPaused) {
-          speakWordsFromOffset(state.currentWordIndex);
-        }
+        if (isNaturalVoice()) loadKokoro().catch(() => setVoiceStatus('Natural voice unavailable'));
+        if (state.isPlaying && !state.isPaused) speakWordsFromOffset(state.currentWordIndex);
       });
+
+      // Clear per-document state
+      function resetDocumentState() {
+        if (state.imageUrl) URL.revokeObjectURL(state.imageUrl);
+        state.imageUrl = null;
+        state.pdfDoc = null;
+        state.mdNode = null;
+        state.wordEls = [];
+        state.activeEls = [];
+        state.blockEnd = [];
+        state.hlEnd = 0;
+        state.mode = '';
+        state.pagesText = [];
+        state.allWords = [];
+        state.wordPositions = [];
+        state.pageWordIndices = [];
+        state.currentPage = 1;
+        state.currentWordIndex = 0;
+        renderToken++;
+        if (elVisualViewerContainer) elVisualViewerContainer.innerHTML = '';
+      }
 
       // Clear document content and revert screen interfaces to selection setup
       function resetToLandingScreen() {
         stopSpeech();
-        
-        // Reset full state
+        resetDocumentState();
         state.file = null;
         state.fileName = '';
         state.fileType = '';
-        state.pagesText = [];
-        state.allWords = [];
-        state.pageWordIndices = [];
-        state.currentPage = 1;
 
         elFileInput.value = '';
-        if (elTopFilename) {
-          elTopFilename.textContent = '';
-          elTopFilename.classList.add('hidden');
-        }
-        
-        // Reset progress trackers
+        elTopFilename.textContent = '';
+        elTopFilename.classList.add('hidden');
+
         elProgressBarFill.style.width = '0%';
         elProcPctText.textContent = '0%';
         elProcStageText.textContent = 'Analyzing structure...';
         elProcThumbnail.innerHTML = '';
-        
-        // Swaps screens
+
         elReaderSection.classList.add('hidden');
         elProcessingSection.classList.add('hidden');
         elHeaderReset.classList.add('hidden');
@@ -1584,6 +1919,8 @@
       }
 
       elBtnResetHeader.addEventListener('click', resetToLandingScreen);
+
+      lucide.createIcons();
 
     </script>
   </body>
